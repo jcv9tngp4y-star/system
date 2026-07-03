@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#05030b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="THE SYSTEM">
+<title>THE SYSTEM</title>
+<link id="appicon" rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --p:#b16cff; --pb:#d8b4fe; --pd:#7b2cbf; --pdim:#5a189a;
+  --bg:#05030b; --panel:rgba(9,5,20,.93); --panel2:rgba(18,9,38,.72);
+  --txt:#efe6ff; --dim:#9f8bc9; --good:#4ade80; --bad:#f87171; --gold:#fbbf24;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--txt);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background-image:
+    radial-gradient(ellipse at 50% -10%, rgba(123,44,191,.25), transparent 60%),
+    radial-gradient(ellipse at 80% 110%, rgba(90,24,154,.2), transparent 55%);
+  background-attachment:fixed;
+  overscroll-behavior:none;
+}
+#app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding-bottom:76px}
+header{
+  padding:14px 14px 10px; display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid rgba(177,108,255,.35);
+  background:linear-gradient(180deg,rgba(46,16,84,.6),transparent);
+}
+.lvlbox{
+  width:54px;height:54px;flex:0 0 54px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:1px solid var(--p); background:rgba(8,4,18,.6); position:relative;
+  box-shadow:0 0 14px rgba(177,108,255,.5), inset 0 0 12px rgba(177,108,255,.22);
+}
+.lvlbox::before{content:"";position:absolute;inset:3px;border:1px solid rgba(177,108,255,.3);pointer-events:none}
+.lvlbox small{font-size:8px;letter-spacing:2px;color:var(--dim)}
+.lvlbox b{font-size:22px;color:#fff;text-shadow:0 0 8px var(--p);line-height:1}
+.hmeta{flex:1;min-width:0}
+.hname{font-size:12px;letter-spacing:3px;color:var(--pb);font-weight:600}
+.hrank{font-size:10px;letter-spacing:2px;color:var(--dim);margin-top:2px}
+.hrank b{color:var(--gold);text-shadow:0 0 6px rgba(251,191,36,.6)}
+.xpbar{margin-top:6px;height:8px;border:1px solid rgba(177,108,255,.5);background:rgba(0,0,0,.4);position:relative}
+.xpfill{height:100%;background:linear-gradient(90deg,var(--pd),var(--pb));box-shadow:0 0 8px var(--p);transition:width .4s}
+.xptxt{font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:3px;text-align:right}
+.streak{font-size:10px;letter-spacing:1px;color:var(--pb);text-align:right;white-space:nowrap}
+.streak b{color:#fff;font-size:16px;text-shadow:0 0 8px var(--p)}
+main{flex:1;padding:14px}
+.panel{
+  border:1px solid rgba(177,108,255,.85); margin-bottom:16px; position:relative;
+  background:
+    linear-gradient(rgba(177,108,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(177,108,255,.045) 1px,transparent 1px),
+    var(--panel);
+  background-size:22px 22px,22px 22px,auto;
+  box-shadow:0 0 22px rgba(177,108,255,.35), 0 0 60px rgba(123,44,191,.15), inset 0 0 34px rgba(90,24,154,.22);
+  animation:pin .25s ease-out;
+}
+.panel::before{content:"";position:absolute;inset:4px;border:1px solid rgba(177,108,255,.28);pointer-events:none;z-index:1}
+.panel::after{
+  content:"";position:absolute;top:-3px;left:14px;right:14px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(216,180,254,.9),transparent);
+  filter:drop-shadow(0 0 4px var(--p));pointer-events:none;
+}
+.pbody,.ptitle{position:relative;z-index:2}
+@keyframes pin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.ptitle{
+  display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 14px;
+  border-bottom:1px solid rgba(177,108,255,.35);
+  font-size:14px;letter-spacing:7px;font-weight:300;color:#fff;text-shadow:0 0 10px var(--p),0 0 26px rgba(177,108,255,.7);
+  text-transform:uppercase;
+}
+.diamond{
+  width:24px;height:24px;flex:0 0 24px;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:14px;font-weight:600;background:transparent;border:2px solid #fff;border-radius:50%;
+  box-shadow:0 0 12px var(--p), inset 0 0 8px rgba(177,108,255,.55);text-shadow:0 0 6px var(--p);
+}
+.diamond span{display:block;line-height:1}
+.pbody{padding:14px}
+.qname{font-size:20px;letter-spacing:3px;color:#fff;text-shadow:0 0 12px var(--p);text-align:center;margin:6px 0 2px;font-weight:700}
+.qsub{text-align:center;color:var(--dim);font-size:11px;letter-spacing:2px;margin-bottom:12px}
+.goalrow{display:flex;justify-content:space-between;padding:7px 4px;border-bottom:1px dashed rgba(177,108,255,.25);font-size:13px}
+.goalrow .gname{color:var(--txt)}
+.goalrow .gval{color:var(--pb)}
+.warn{color:var(--bad);font-size:10px;letter-spacing:1px;text-align:center;margin-top:12px}
+.btn{
+  display:block;width:100%;padding:13px;margin-top:12px;cursor:pointer;
+  background:rgba(8,4,18,.55);
+  border:1px solid var(--p);color:#fff;font-size:13px;letter-spacing:5px;font-weight:400;
+  font-family:inherit;text-shadow:0 0 8px var(--p),0 0 20px rgba(177,108,255,.6);
+  box-shadow:0 0 14px rgba(177,108,255,.4), inset 0 0 14px rgba(177,108,255,.14);
+}
+.btn:active{background:rgba(123,44,191,.45)}
+.btn.ghost{background:transparent;box-shadow:none;color:var(--pb);border-color:rgba(177,108,255,.5)}
+.btn.danger{border-color:var(--bad);color:var(--bad);text-shadow:none;background:rgba(248,113,113,.08);box-shadow:none}
+.excard{border:1px solid rgba(177,108,255,.45);background:var(--panel2);margin-bottom:12px;padding:10px 12px}
+.exhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.exname{font-size:14px;font-weight:600;color:#fff;letter-spacing:1px}
+.extag{font-size:10px;color:var(--dim);letter-spacing:1px;white-space:nowrap}
+.caltag{color:var(--gold);font-size:9px;letter-spacing:2px;border:1px solid rgba(251,191,36,.5);padding:2px 6px;display:inline-block;margin-bottom:8px}
+.setrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed rgba(177,108,255,.2)}
+.setnum{width:20px;flex:0 0 20px;text-align:center;font-size:11px;color:var(--dim)}
+.setrow.done .setnum{color:var(--good)}
+.wtag{min-width:70px;font-size:14px;color:var(--pb);font-weight:600}
+.wtag small{font-size:9px;color:var(--dim)}
+.repctl{display:flex;align-items:center;gap:2px;margin-left:auto}
+.repctl button{
+  width:32px;height:32px;background:rgba(123,44,191,.25);border:1px solid rgba(177,108,255,.5);
+  color:var(--pb);font-size:14px;cursor:pointer;font-family:inherit;
+}
+.repctl .rv{width:34px;text-align:center;font-size:15px;color:#fff}
+.chk{
+  width:40px;height:34px;flex:0 0 40px;margin-left:6px;cursor:pointer;
+  background:rgba(0,0,0,.35);border:1px solid rgba(177,108,255,.5);color:transparent;font-size:16px;font-family:inherit;
+}
+.setrow.done .chk{background:rgba(74,222,128,.18);border-color:var(--good);color:var(--good)}
+.cin{
+  width:64px;padding:7px 4px;background:rgba(0,0,0,.4);border:1px solid rgba(177,108,255,.5);
+  color:#fff;font-size:15px;text-align:center;font-family:inherit;border-radius:0;
+}
+.cin:focus{outline:none;border-color:var(--pb);box-shadow:0 0 8px rgba(177,108,255,.4)}
+.logbtn{
+  margin-left:auto;padding:7px 12px;background:rgba(123,44,191,.35);border:1px solid var(--p);
+  color:#fff;font-size:11px;letter-spacing:2px;cursor:pointer;font-family:inherit;
+}
+.setrow.done .logbtn{border-color:var(--good);color:var(--good);background:rgba(74,222,128,.1)}
+.xmark{font-size:12px;color:var(--dim)}
+.cbig{text-align:center;font-size:36px;color:#fff;text-shadow:0 0 14px var(--p);margin:8px 0;font-weight:700}
+.intv{display:flex;justify-content:space-between;padding:8px 6px;border-bottom:1px dashed rgba(177,108,255,.25);font-size:13px}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.stat{border:1px solid rgba(177,108,255,.4);background:rgba(0,0,0,.25);padding:10px;text-align:center}
+.stat small{font-size:9px;letter-spacing:2px;color:var(--dim);display:block}
+.stat b{font-size:20px;color:#fff;text-shadow:0 0 8px var(--p)}
+.attr{margin:10px 0}
+.attrhead{display:flex;justify-content:space-between;font-size:12px;letter-spacing:2px;margin-bottom:4px}
+.attrhead b{color:var(--pb)}
+.abar{height:9px;border:1px solid rgba(177,108,255,.45);background:rgba(0,0,0,.4)}
+.afill{height:100%;background:linear-gradient(90deg,var(--pdim),var(--p));box-shadow:0 0 8px rgba(177,108,255,.6)}
+.rankbig{text-align:center;margin:10px 0 4px}
+.rankbig .r{
+  font-size:56px;font-weight:800;color:var(--gold);text-shadow:0 0 24px rgba(251,191,36,.8),0 0 60px rgba(177,108,255,.6);
+  font-family:Georgia,serif;
+}
+.rankbig small{display:block;font-size:10px;letter-spacing:4px;color:var(--dim)}
+.wrow{display:flex;gap:8px;align-items:center}
+.wrow input{flex:1}
+.wlist{margin-top:10px}
+.wl{display:flex;justify-content:space-between;padding:7px 4px;border-bottom:1px dashed rgba(177,108,255,.2);font-size:13px}
+.wl .d{color:var(--dim);font-size:11px}
+.delta.dn{color:var(--good)} .delta.up{color:var(--bad)} .delta.eq{color:var(--dim)}
+svg.chart{width:100%;height:170px;display:block}
+.logent{border-top:1px dashed rgba(177,108,255,.25);padding:9px 2px}
+.logent .lh{display:flex;justify-content:space-between;font-size:12px}
+.logent .lh b{color:var(--pb);letter-spacing:1px}
+.logent .lh span{color:var(--dim);font-size:10px}
+.logent .ld{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.6;white-space:pre-wrap}
+nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;max-width:520px;margin:0 auto;
+  background:rgba(11,7,20,.96);border-top:1px solid rgba(177,108,255,.5);
+  box-shadow:0 -4px 20px rgba(90,24,154,.4);
+}
+nav button{
+  flex:1;padding:11px 0 max(11px, env(safe-area-inset-bottom));background:none;border:none;color:var(--dim);
+  font-size:9px;letter-spacing:1px;cursor:pointer;font-family:inherit;
+}
+nav button .ico{display:block;font-size:17px;margin-bottom:3px}
+nav button.on{color:#fff;text-shadow:0 0 8px var(--p)}
+#ovl{
+  position:fixed;inset:0;background:rgba(5,2,12,.8);z-index:50;display:none;
+  align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px);
+}
+#ovl.show{display:flex}
+.mbox{
+  width:100%;max-width:380px;border:1px solid var(--p);position:relative;
+  background:
+    linear-gradient(rgba(177,108,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(177,108,255,.045) 1px,transparent 1px),
+    rgba(8,4,18,.97);
+  background-size:22px 22px,22px 22px,auto;
+  box-shadow:0 0 44px rgba(177,108,255,.65), inset 0 0 30px rgba(90,24,154,.25);padding:0;
+  animation:mpop .22s ease-out;
+}
+.mbox::before{content:"";position:absolute;inset:5px;border:1px solid rgba(177,108,255,.3);pointer-events:none}
+@keyframes mpop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+.mbody{padding:24px 18px;text-align:center;font-size:14px;line-height:1.7;position:relative}
+.mbody h2{
+  display:inline-block;font-size:15px;letter-spacing:7px;font-weight:300;color:#fff;
+  text-shadow:0 0 10px var(--p),0 0 26px rgba(177,108,255,.7);margin-bottom:14px;
+  border:1px solid rgba(216,180,254,.7);padding:9px 22px 9px 26px;
+  box-shadow:0 0 14px rgba(177,108,255,.4), inset 0 0 10px rgba(177,108,255,.12);
+}
+.mbody .big{
+  display:inline-block;font-size:30px;color:#fff;letter-spacing:3px;margin:10px 0;font-weight:400;
+  text-shadow:0 0 18px var(--p),0 0 40px rgba(177,108,255,.7);
+  border:1px solid rgba(216,180,254,.6);padding:8px 26px;
+  box-shadow:0 0 14px rgba(177,108,255,.35), inset 0 0 12px rgba(177,108,255,.1);
+}
+.panel.red{border-color:var(--bad);box-shadow:0 0 18px rgba(248,113,113,.35), inset 0 0 24px rgba(185,28,28,.15)}
+.panel.red .ptitle{background:linear-gradient(90deg,rgba(248,113,113,.3),transparent);border-color:rgba(248,113,113,.45);text-shadow:0 0 8px var(--bad)}
+.panel.red .diamond{background:#b91c1c;box-shadow:0 0 10px var(--bad)}
+.dq .setrow{cursor:pointer}
+.dq .gname{flex:none;font-size:14px}
+.clearbanner{text-align:center;padding:14px 0;color:var(--good);letter-spacing:3px;font-size:13px;text-shadow:0 0 10px rgba(74,222,128,.6)}
+.streakchip{
+  position:absolute;top:10px;right:10px;z-index:3;
+  font-size:10px;letter-spacing:1px;color:var(--gold);
+  border:1px solid rgba(251,191,36,.55);padding:4px 8px;background:rgba(0,0,0,.35);
+  box-shadow:0 0 8px rgba(251,191,36,.25);text-shadow:0 0 6px rgba(251,191,36,.6);
+}
+.streakchip.zero{color:var(--dim);border-color:rgba(177,108,255,.35);box-shadow:none;text-shadow:none}
+.muted{color:var(--dim);font-size:12px}
+.gold{color:var(--gold)} .good{color:var(--good)}
+textarea.io{width:100%;height:110px;background:rgba(0,0,0,.5);border:1px solid rgba(177,108,255,.5);color:var(--txt);font-size:10px;padding:8px;font-family:monospace}
+.sect{font-size:10px;letter-spacing:3px;color:var(--dim);margin:16px 0 6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hdr"></header>
+  <main id="view">
+    <noscript>
+      <div style="border:1px solid #f87171;padding:16px;margin-top:20px;color:#f87171;text-align:center;letter-spacing:2px;font-size:13px">
+        ⚠ JAVASCRIPT IS DISABLED IN THIS VIEWER<br>
+        <span style="font-size:11px;color:#9f8bc9">This app needs a viewer that runs JavaScript. Try a different app or browser.</span>
+      </div>
+    </noscript>
+    <div id="bootmsg" style="text-align:center;padding:40px 10px;color:#9f8bc9;letter-spacing:3px;font-size:12px">INITIALIZING…</div>
+  </main>
+</div>
+<nav id="nav"></nav>
+<div id="ovl"><div class="mbox"><div class="mbody" id="mbody"></div></div></div>
+
+<script>
+"use strict";
+window.onerror = function(msg, src, line){
+  var v=document.getElementById("view");
+  if(v) v.innerHTML='<div style="border:1px solid #f87171;padding:16px;margin-top:20px;color:#f87171;font-size:12px;letter-spacing:1px">⚠ SYSTEM ERROR<br><span style="color:#9f8bc9">'+msg+' (line '+line+')</span><br><br><span style="color:#9f8bc9">Screenshot this and send it to get it fixed.</span></div>';
+};
+try{
+  var atl=document.createElement("link");
+  atl.rel="apple-touch-icon"; atl.href="icon-180.png";
+  document.head.appendChild(atl);
+}catch(e){}
+const MEM={};
+let storageBlocked=false;
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ storageBlocked=true; return MEM[k]||null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ storageBlocked=true; MEM[k]=v; } }
+
+const KEY = "theSystem_v1";
+const todayStr = () => new Date().toLocaleDateString("en-CA");
+
+const DAYS = [
+ { name:"BACK & BICEPS", ex:[
+   {id:"latpull", name:"Lat Pulldown",             sets:4, lo:8,  hi:12, inc:5},
+   {id:"row",     name:"Seated Cable Row",         sets:3, lo:8,  hi:12, inc:5},
+   {id:"dbrow",   name:"One-Arm Dumbbell Row",     sets:3, lo:10, hi:12, inc:5,  note:"per arm"},
+   {id:"bbcurl",  name:"Barbell Curl",             sets:3, lo:8,  hi:12, inc:5},
+   {id:"hcurl",   name:"Hammer Curl",              sets:3, lo:10, hi:15, inc:5,  note:"per dumbbell"},
+ ]},
+ { name:"LEGS", ex:[
+   {id:"squat",   name:"Barbell Back Squat",       sets:4, lo:6,  hi:10, inc:10},
+   {id:"rdl",     name:"Romanian Deadlift",        sets:3, lo:8,  hi:12, inc:10},
+   {id:"legpress",name:"Leg Press",                sets:3, lo:10, hi:15, inc:10},
+   {id:"legcurl", name:"Lying Leg Curl",           sets:3, lo:10, hi:15, inc:5},
+   {id:"calf",    name:"Standing Calf Raise",      sets:4, lo:12, hi:20, inc:10},
+ ]},
+ { name:"SHOULDERS & ARMS", ex:[
+   {id:"ohp",     name:"Seated DB Shoulder Press", sets:4, lo:8,  hi:12, inc:5,  note:"per dumbbell"},
+   {id:"latraise",name:"Lateral Raise",            sets:4, lo:12, hi:20, inc:5,  note:"per dumbbell"},
+   {id:"facepull",name:"Face Pull",                sets:3, lo:12, hi:15, inc:5},
+   {id:"ezcurl",  name:"EZ-Bar Curl",              sets:3, lo:8,  hi:12, inc:5},
+   {id:"skull",   name:"Skull Crusher",            sets:3, lo:8,  hi:12, inc:5},
+ ]},
+ { name:"ENDURANCE TRAINING", cardio:true },
+ { name:"CHEST & TRICEPS", ex:[
+   {id:"bench",   name:"Barbell Bench Press",      sets:4, lo:6,  hi:10, inc:5},
+   {id:"incdb",   name:"Incline Dumbbell Press",   sets:3, lo:8,  hi:12, inc:5,  note:"per dumbbell"},
+   {id:"fly",     name:"Cable Fly",                sets:3, lo:12, hi:15, inc:5},
+   {id:"pushdn",  name:"Triceps Rope Pushdown",    sets:3, lo:10, hi:15, inc:5},
+   {id:"ohext",   name:"Overhead Cable Extension", sets:3, lo:10, hi:15, inc:5},
+ ]},
+];
+const DAYLBL=["MON","TUE","WED","THU","FRI"];
+function gateForToday(){
+  const wd=new Date().getDay();
+  return (wd>=1 && wd<=5) ? wd-1 : null;
+}
+
+const CARDIO = [
+ {run:1,  walk:2,  rounds:7}, {run:1.5,walk:1.5,rounds:7}, {run:2,  walk:1,  rounds:7},
+ {run:3,  walk:1.5,rounds:5}, {run:4,  walk:1.5,rounds:4}, {run:5,  walk:2,  rounds:4},
+ {run:6,  walk:2,  rounds:3}, {run:8,  walk:2,  rounds:3}, {run:10, walk:2,  rounds:2},
+ {run:12, walk:1,  rounds:2}, {run:20, walk:0,  rounds:1}, {run:25, walk:0,  rounds:1},
+ {run:30, walk:0,  rounds:1},
+];
+
+const RANKS = [["E",0],["D",5],["C",10],["B",18],["A",28],["S",40]];
+
+function defaultDaily(){
+  return { count:0, lastComplete:null, penalty:false, penClear:null,
+           todayD:null, parts:[0,0,0], bestKm:0 };
+}
+function defaultState(){
+  return { level:1, xp:0, totalXp:0, quests:0, cardioDone:0, tonnage:0,
+           streak:0, bestStreak:0, lastDone:null, lastWeighXp:null,
+           cycle:0, ex:{}, cardioLvl:1, weights:[], log:[], session:null,
+           daily: defaultDaily() };
+}
+let S;
+try { S = JSON.parse(lsGet(KEY)) || defaultState(); }
+catch(e){ S = defaultState(); }
+if(!S.daily) S.daily = defaultDaily();
+if(!Array.isArray(S.daily.parts) || typeof S.daily.parts[0]!=="number") S.daily.parts=[0,0,0];
+function save(){ lsSet(KEY, JSON.stringify(S)); }
+
+const exDef = id => { for(const d of DAYS){ if(d.ex) for(const e of d.ex) if(e.id===id) return e; } return null; };
+const exSt  = id => { if(!S.ex[id]) S.ex[id]={calibrated:false,weight:0,fails:0,best:0}; return S.ex[id]; };
+const round5 = w => Math.max(5, Math.round(w/5)*5);
+const e1rm = (w,r) => w*(1+r/30);
+
+function rankOf(lv){ let r="E"; for(const [n,min] of RANKS) if(lv>=min) r=n; return r; }
+function xpNeed(lv){ return 100 + (lv-1)*50; }
+function gainXp(amount, silently){
+  S.xp += amount; S.totalXp += amount;
+  const ups=[];
+  while(S.xp >= xpNeed(S.level)){ S.xp -= xpNeed(S.level); S.level++; ups.push(S.level); }
+  save(); renderHeader();
+  if(ups.length && !silently){
+    const nl = ups[ups.length-1];
+    modal(`<h2>⚠ NOTIFICATION</h2><div class="muted">You have grown stronger.</div>
+      <div class="big">LEVEL ${nl}</div>
+      <div class="muted">RANK&nbsp;<span class="gold">${rankOf(nl)}</span></div>
+      <button class="btn" onclick="closeModal()">ARISE</button>`);
+  }
+}
+
+function modal(html){ document.getElementById("mbody").innerHTML=html; document.getElementById("ovl").classList.add("show"); }
+function closeModal(){ document.getElementById("ovl").classList.remove("show"); }
+
+function renderHeader(){
+  const need=xpNeed(S.level), pct=Math.min(100,Math.round(S.xp/need*100));
+  document.getElementById("hdr").innerHTML=`
+    <div class="lvlbox"><small>LV</small><b>${S.level}</b></div>
+    <div class="hmeta">
+      <div class="hname">PLAYER&nbsp;·&nbsp;ADAM</div>
+      <div class="hrank">HUNTER RANK&nbsp;<b>${rankOf(S.level)}</b></div>
+      <div class="xpbar"><div class="xpfill" style="width:${pct}%"></div></div>
+      <div class="xptxt">${S.xp} / ${need} XP</div>
+    </div>
+    <div class="streak">STREAK<br><b>${S.streak}</b><br>DAYS</div>`;
+}
+const NAVS=[["quest","⚔","QUEST"],["stats","👤","STATUS"],["weight","⚖","WEIGHT"],["log","📜","LOG"],["sys","⚙","SYSTEM"]];
+let curView="quest";
+function renderNav(){
+  document.getElementById("nav").innerHTML = NAVS.map(([id,ico,lbl])=>
+    `<button class="${curView===id?'on':''}" onclick="go('${id}')"><span class="ico">${ico}</span>${lbl}</button>`).join("");
+}
+function go(v){ curView=v; renderNav(); VIEWS[v](); window.scrollTo(0,0); }
+
+function dailyTargets(){
+  const c=S.daily.count;
+  return { reps:Math.min(100, 50+Math.floor(c/3)*5),
+           run: Math.min(30, 15+Math.floor(c/2)) };
+}
+function checkPenalty(){
+  const y=new Date(); y.setDate(y.getDate()-1);
+  const yStr=y.toLocaleDateString("en-CA");
+  const anchor=[S.daily.lastComplete,S.daily.penClear].filter(Boolean).sort().pop();
+  if(!S.daily.penalty && anchor && anchor<yStr){ S.daily.penalty=true; S.streak=0; save(); }
+}
+function dailyGoals(){
+  const dt=dailyTargets();
+  return [dt.reps, dt.reps, dt.run];
+}
+function addDaily(i,n){
+  if(S.daily.lastComplete===todayStr()) return;
+  const goals=dailyGoals();
+  S.daily.parts[i]=Math.max(0, Math.min(goals[i], S.daily.parts[i]+n));
+  save();
+  if(S.daily.parts.every((v,j)=>v>=goals[j])) completeDaily();
+  else vQuest();
+}
+function completeDaily(){
+  const goals=dailyGoals();
+  if(!S.daily.parts.every((v,j)=>v>=goals[j])) return;
+  const t=todayStr(), dt=dailyTargets();
+  const kmEl=document.getElementById("dkm");
+  if(kmEl){ const km=parseFloat(kmEl.value); if(km>0 && km>S.daily.bestKm) S.daily.bestKm=km; }
+  const y=new Date(); y.setDate(y.getDate()-1);
+  const yStr=y.toLocaleDateString("en-CA");
+  const prev=S.daily.lastComplete;
+  S.daily.lastComplete=t; S.daily.count++;
+  let streakMsg;
+  if(S.daily.penalty){
+    streakMsg=`<span class="warn" style="display:block">STREAK LOCKED — PENALTY QUEST UNCLEARED</span>`;
+  } else {
+    S.streak = (prev===yStr) ? S.streak+1 : 1;
+    if(S.streak>S.bestStreak) S.bestStreak=S.streak;
+    streakMsg=`<div class="muted">Streak: ${S.streak} day${S.streak===1?"":"s"}</div>`;
+  }
+  const xp=50+Math.min(S.streak,25);
+  S.log.unshift({d:t, name:"DAILY QUEST", xp,
+    det:`Push-ups ${dt.reps} · Sit-ups ${dt.reps} · Run ${dt.run>=30?"30+ min":dt.run+" min"}`});
+  const lvBefore=S.level;
+  gainXp(xp,true); save();
+  modal(`<h2>⚠ DAILY QUEST CLEAR</h2>
+    <div class="big">+${xp} XP</div>
+    ${S.level>lvBefore?`<div>LEVEL UP → <b class="gold">LV ${S.level} · RANK ${rankOf(S.level)}</b></div>`:""}
+    ${streakMsg}
+    <button class="btn" onclick="closeModal();go('quest')">ARISE</button>`);
+  renderHeader();
+}
+function clearPenalty(){
+  modal(`<h2>⚠ SYSTEM</h2><div>Confirm: penalty run completed without stopping?</div>
+    <button class="btn" onclick="doClearPenalty()">CONFIRMED</button>
+    <button class="btn ghost" onclick="closeModal()">NOT YET</button>`);
+}
+function doClearPenalty(){
+  S.daily.penalty=false; S.daily.penClear=todayStr();
+  S.log.unshift({d:todayStr(), name:"PENALTY QUEST", xp:20, det:"Penalty run cleared. Streak unlocked."});
+  gainXp(20,true); save(); closeModal(); go("quest");
+}
+
+function vQuest(){
+  checkPenalty();
+  const t=todayStr();
+  if(S.daily.todayD!==t){ S.daily.todayD=t; S.daily.parts=[0,0,0]; save(); }
+  const dt=dailyTargets();
+  const dailyDone=S.daily.lastComplete===t;
+  const maxRun=dt.run>=30;
+
+  const storeWarn = storageBlocked ? `
+    <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:12px;letter-spacing:1px">
+      ⚠ THIS VIEWER BLOCKS SAVED DATA — progress will be lost when you close the app.<br>
+      <span class="muted">Try opening the file in a different app or browser.</span></div></div>` : "";
+
+  const penHtml = S.daily.penalty ? `
+    <div class="panel red"><div class="ptitle"><div class="diamond"><span>!</span></div>PENALTY QUEST</div>
+      <div class="pbody">
+        <div class="qsub" style="color:var(--bad)">YOU FAILED TO COMPLETE THE DAILY QUEST</div>
+        <div class="goalrow"><span class="gname">Run without stopping</span><span class="gval" style="color:var(--bad)">${dt.run+10} min</span></div>
+        <div class="warn">STREAK LOCKED AT 0 UNTIL CLEARED</div>
+        <button class="btn danger" onclick="clearPenalty()">PENALTY COMPLETE</button>
+      </div></div>` : "";
+
+  const goals=dailyGoals();
+  const items=[["Push-ups","reps"],["Sit-ups","reps"],
+    [maxRun?"Run — push distance":"Run","min"]];
+  let dailyBody;
+  if(dailyDone){
+    dailyBody=`<div class="clearbanner">✓ DAILY QUEST CLEARED</div>
+      <div class="muted" style="text-align:center;font-size:11px">Completed ${S.daily.count}× · next targets: ${dailyTargets().reps} reps / ${dailyTargets().run>=30?"30+ min":dailyTargets().run+" min"} · resets at midnight</div>`;
+  } else {
+    dailyBody = items.map(([n,unit],i)=>{
+      const v=S.daily.parts[i], g=goals[i], hit=v>=g;
+      return `
+      <div class="setrow ${hit?'done':''}">
+        <span class="setnum">${hit?"✓":i+1}</span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px">
+            <span class="gname" style="flex:none">${n}</span>
+            <span class="gval">${v} / ${g} ${unit}</span>
+          </div>
+          <div class="abar" style="height:5px;margin-top:5px"><div class="afill" style="width:${Math.min(100,Math.round(v/g*100))}%"></div></div>
+        </div>
+        <div class="repctl">
+          <button onclick="addDaily(${i},-1)">−</button>
+          <button onclick="addDaily(${i},1)">+1</button>
+          <button onclick="addDaily(${i},5)">+5</button>
+        </div>
+      </div>`;}).join("")
+      + (maxRun?`<div class="wrow" style="margin-top:8px">
+          <span class="muted" style="font-size:11px">Distance (km, optional)</span>
+          <input class="cin" type="number" inputmode="decimal" step="0.1" id="dkm" placeholder="${S.daily.bestKm||'km'}">
+        </div>${S.daily.bestKm?`<div class="muted" style="font-size:10px;margin-top:4px">Best: ${S.daily.bestKm} km</div>`:""}`:"")
+      + `<div class="muted" style="font-size:10px;text-align:center;margin-top:10px">Count as you go — clears itself when every target is hit · resets at midnight · cleared ${S.daily.count}×</div>`;
+  }
+  const dailyHtml=`
+    <div class="panel dq">
+      <span class="streakchip ${S.streak?'':'zero'}">⚔ ${S.streak} DAY${S.streak===1?"":"S"}</span>
+      <div class="ptitle"><div class="diamond"><span>!</span></div>DAILY QUEST — TRAINING</div>
+      <div class="pbody">${dailyBody}</div></div>`;
+
+  const gi = gateForToday();
+  const day = gi===null ? null : DAYS[gi];
+  const doneToday = S.lastDone === t;
+  let inner;
+  if(S.session){
+    inner = `<div class="qname">${DAYS[S.session.day].name}</div>
+      <div class="qsub">RAID IN PROGRESS</div>
+      <button class="btn" onclick="go('workout')">RE-ENTER DUNGEON</button>
+      <button class="btn ghost" onclick="abandonQuest()">ABANDON RAID</button>`;
+  } else if(gi===null){
+    inner = `<div class="qname">NO GATE TODAY</div>
+      <div class="qsub">WEEKEND — MANDATORY RECOVERY</div>
+      <div class="muted" style="text-align:center;font-size:11px">Muscle is built while you rest. The daily quest still stands.<br>Missed a gate this week? Enter it from the schedule below.</div>`;
+  } else {
+    let goals2;
+    if(day.cardio){
+      const c=CARDIO[Math.min(S.cardioLvl,CARDIO.length)-1];
+      const tot=Math.round((c.run+c.walk)*c.rounds);
+      goals2 = `<div class="goalrow"><span class="gname">Warm-up walk</span><span class="gval">5 min</span></div>
+        <div class="goalrow"><span class="gname">${c.walk?`Run ${c.run} min / walk ${c.walk} min`:`Run continuously`}</span>
+        <span class="gval">${c.walk?`× ${c.rounds}`:`${c.run} min`}</span></div>
+        <div class="goalrow"><span class="gname">Cool-down walk</span><span class="gval">5 min</span></div>
+        <div class="goalrow"><span class="gname">Total</span><span class="gval">≈ ${tot+10} min</span></div>`;
+    } else {
+      goals2 = day.ex.map(e=>{
+        const st=exSt(e.id);
+        const w = st.calibrated ? `${st.weight} lb × ${e.lo}–${e.hi}` : `CALIBRATE · ${e.lo}–${e.hi} reps`;
+        return `<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${e.sets} × ${w}</span></div>`;
+      }).join("");
+    }
+    inner = `<div class="qname">${day.name}</div>
+      <div class="qsub">${day.cardio?`ENDURANCE GATE · LEVEL ${S.cardioLvl}`:"STRENGTH GATE"}${doneToday?" · EXTRA RAID":""}</div>
+      ${goals2}
+      ${day.cardio?`<div class="muted" style="font-size:10px;text-align:center;margin-top:8px">Zone 2 or VO2-max intervals of equal time also count.</div>`:""}
+      ${doneToday?`<div class="warn">A GATE WAS ALREADY CLEARED TODAY — REST IS ALSO TRAINING</div>`:""}
+      <button class="btn" onclick="startQuestAt(${gi})">ENTER DUNGEON</button>`;
+  }
+  document.getElementById("view").innerHTML = storeWarn + penHtml + dailyHtml + `
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>DUNGEON GATE</div>
+      <div class="pbody">${inner}</div></div>
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>WEEKLY SCHEDULE</div>
+      <div class="pbody">${DAYS.map((d,i)=>`<div class="goalrow" onclick="startQuestAt(${i})" style="cursor:pointer">
+        <span class="gname" style="${i===gi?'color:#fff;text-shadow:0 0 8px var(--p)':''}">${i===gi?"▶ ":""}${DAYLBL[i]} — ${d.name}</span>
+        <span class="gval">${d.cardio?"CARDIO":"LIFT"} ▸</span></div>`).join("")}
+        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Tap any gate to raid it off-schedule.</div></div></div>`;
+}
+function abandonQuest(){
+  modal(`<h2>⚠ WARNING</h2><div>Abandon the current quest?<br><span class="muted">Logged sets will be lost.</span></div>
+    <button class="btn danger" onclick="S.session=null;save();closeModal();go('quest')">ABANDON</button>
+    <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
+}
+
+function startQuestAt(i){
+  if(S.session){ go("workout"); return; }
+  const day=DAYS[i];
+  if(day.cardio){
+    S.session={day:i, cardio:true, level:Math.min(S.cardioLvl,CARDIO.length)};
+  } else {
+    const entries={};
+    for(const e of day.ex){
+      const st=exSt(e.id);
+      entries[e.id]={cal:!st.calibrated,
+        sets:Array.from({length:e.sets},()=>({w:st.calibrated?st.weight:0,r:st.calibrated?e.hi:0,done:false}))};
+    }
+    S.session={day:i, entries};
+  }
+  save(); go("workout");
+}
+
+function vWorkout(){
+  if(!S.session){ go("quest"); return; }
+  const day=DAYS[S.session.day];
+  if(S.session.cardio){ vCardioSession(); return; }
+  const cards=day.ex.map(e=>{
+    const ent=S.session.entries[e.id];
+    const rows=ent.sets.map((s,i)=> ent.cal ? `
+      <div class="setrow ${s.done?'done':''}" >
+        <span class="setnum">${i+1}</span>
+        <input class="cin" type="number" inputmode="decimal" placeholder="lb" id="cw-${e.id}-${i}" value="${s.w||''}">
+        <span class="xmark">lb ×</span>
+        <input class="cin" type="number" inputmode="numeric" placeholder="reps" id="cr-${e.id}-${i}" value="${s.r||''}">
+        <button class="logbtn" onclick="logCal('${e.id}',${i})">${s.done?"✓ SET":"LOG"}</button>
+      </div>` : `
+      <div class="setrow ${s.done?'done':''}">
+        <span class="setnum">${i+1}</span>
+        <span class="wtag" onclick="editW('${e.id}',${i})">${s.w}<small> lb ✎</small></span>
+        <div class="repctl">
+          <button onclick="adjR('${e.id}',${i},-1)">−</button>
+          <span class="rv">${s.r}</span>
+          <button onclick="adjR('${e.id}',${i},1)">+</button>
+        </div>
+        <button class="chk" onclick="togSet('${e.id}',${i})">✓</button>
+      </div>`).join("");
+    return `<div class="excard">
+      <div class="exhead"><span class="exname">${e.name}</span>
+        <span class="extag">${e.sets}×${e.lo}–${e.hi}${e.note?" · "+e.note:""}</span></div>
+      ${ent.cal?`<span class="caltag">⚠ CALIBRATION — find a weight you can lift ${e.lo}–${e.hi} times, log every set</span>`:""}
+      ${rows}
+    </div>`;
+  }).join("");
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${day.name}</div>
+      <div class="pbody">${cards}
+        <button class="btn" onclick="finishQuest()">CLEAR DUNGEON</button>
+        <button class="btn ghost" onclick="go('quest')">◂ BACK (progress saved)</button>
+      </div></div>`;
+}
+function logCal(id,i){
+  const w=parseFloat(document.getElementById(`cw-${id}-${i}`).value);
+  const r=parseInt(document.getElementById(`cr-${id}-${i}`).value);
+  if(!(w>0)||!(r>0)){ modal(`<h2>⚠ SYSTEM</h2><div>Enter the weight and reps you performed, then press LOG.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
+  const s=S.session.entries[id].sets[i]; s.w=w; s.r=r; s.done=true; save(); vWorkout();
+}
+function togSet(id,i){ const s=S.session.entries[id].sets[i]; s.done=!s.done; save(); vWorkout(); }
+function adjR(id,i,d){ const s=S.session.entries[id].sets[i]; s.r=Math.max(0,Math.min(50,s.r+d)); s.done=true; save(); vWorkout(); }
+function editW(id,i){
+  const s=S.session.entries[id].sets[i];
+  const v=prompt("Weight for this set (lb):", s.w);
+  if(v===null) return; const w=parseFloat(v);
+  if(w>=0){ s.w=w; save(); vWorkout(); }
+}
+
+function finishQuest(){
+  const day=DAYS[S.session.day];
+  let setsDone=0, setsTotal=0, ton=0, det=[], progNotes=[];
+  for(const e of day.ex){
+    const ent=S.session.entries[e.id], st=exSt(e.id);
+    const done=ent.sets.filter(s=>s.done);
+    setsTotal+=e.sets; setsDone+=done.length;
+    if(!done.length){ det.push(`${e.name}: skipped`); continue; }
+    ton += done.reduce((a,s)=>a+s.w*s.r,0);
+    det.push(`${e.name}: `+done.map(s=>`${s.w}×${s.r}`).join(", "));
+    const bestSet=done.reduce((a,s)=>e1rm(s.w,s.r)>e1rm(a.w,a.r)?s:a);
+    const best1=e1rm(bestSet.w,bestSet.r);
+    if(best1>st.best) st.best=Math.round(best1);
+    if(ent.cal){
+      st.weight=round5(best1*0.95/(1+e.hi/30));
+      st.calibrated=true; st.fails=0;
+      progNotes.push(`${e.name}: calibrated → <b class="good">${st.weight} lb</b>`);
+    } else {
+      const minReps=Math.min(...done.map(s=>s.r));
+      if(done.length===e.sets && minReps>=e.hi){
+        st.weight+=e.inc; st.fails=0;
+        progNotes.push(`${e.name}: <b class="good">+${e.inc} lb → ${st.weight} lb</b>`);
+      } else if(minReps<e.lo){
+        st.fails=(st.fails||0)+1;
+        if(st.fails>=2){ st.weight=round5(st.weight*0.9); st.fails=0;
+          progNotes.push(`${e.name}: deload → ${st.weight} lb`);
+        } else progNotes.push(`${e.name}: hold at ${st.weight} lb`);
+      } else progNotes.push(`${e.name}: hold — push for ${e.hi} reps`);
+    }
+  }
+  if(!setsDone){ modal(`<h2>⚠ SYSTEM</h2><div>No sets logged. Complete at least one set.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
+  const allDone = setsDone===setsTotal;
+  const xp = 50 + setsDone*10 + (allDone?50:0);
+  S.tonnage+=ton; S.quests++;
+  completeCommon(day.name, xp, det.join("\n"),
+    `<div class="muted" style="text-align:left;font-size:12px;line-height:1.9">${progNotes.join("<br>")}</div>
+     <div style="margin-top:10px">Volume moved: <b class="gold">${Math.round(ton).toLocaleString()} lb</b></div>`);
+}
+
+function vCardioSession(){
+  const lvl=S.session.level, c=CARDIO[lvl-1];
+  const tot=Math.round((c.run+c.walk)*c.rounds)+10;
+  const ivs = c.walk
+    ? `<div class="intv"><span>Warm-up walk</span><span class="gval">5 min</span></div>
+       <div class="intv"><span>RUN ${c.run} min → WALK ${c.walk} min</span><span class="gval">repeat × ${c.rounds}</span></div>
+       <div class="intv"><span>Cool-down walk</span><span class="gval">5 min</span></div>`
+    : `<div class="intv"><span>Warm-up walk</span><span class="gval">5 min</span></div>
+       <div class="intv"><span>RUN — continuous</span><span class="gval">${c.run} min</span></div>
+       <div class="intv"><span>Cool-down walk</span><span class="gval">5 min</span></div>`;
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>ENDURANCE — LEVEL ${lvl}</div>
+      <div class="pbody">
+        <div class="cbig">≈ ${tot} MIN</div>
+        ${ivs}
+        <button class="btn" onclick="finishCardio(true)">CLEARED — IT WAS MANAGEABLE</button>
+        <button class="btn ghost" onclick="finishCardio(false)">CLEARED — BARELY SURVIVED</button>
+        <button class="btn ghost" onclick="go('quest')">◂ BACK</button>
+      </div></div>`;
+}
+function finishCardio(advance){
+  const lvl=S.session.level;
+  let note;
+  if(advance && S.cardioLvl<CARDIO.length){ S.cardioLvl++; note=`Endurance level up → <b class="good">LEVEL ${S.cardioLvl}</b>`; }
+  else if(advance){ note=`<b class="good">Max program level.</b> Keep running 30+ min — go further or faster.`; }
+  else note=`Level held at ${lvl}. Clear it again to advance.`;
+  S.cardioDone++;
+  completeCommon("ENDURANCE TRAINING", advance?150:120, `Run/walk level ${lvl} completed`, `<div class="muted">${note}</div>`);
+}
+
+function completeCommon(name, xp, detail, extraHtml){
+  const t=todayStr();
+  S.lastDone=t;
+  S.log.unshift({d:t, name, xp, det:detail});
+  if(S.log.length>200) S.log.length=200;
+  S.session=null;
+  const lvBefore=S.level;
+  gainXp(xp,true); save();
+  modal(`<h2>⚠ DUNGEON CLEAR</h2>
+    <div class="big">+${xp} XP</div>
+    ${extraHtml||""}
+    ${S.level>lvBefore?`<div style="margin-top:10px">LEVEL UP → <b class="gold">LV ${S.level} · RANK ${rankOf(S.level)}</b></div>`:""}
+    <button class="btn" onclick="closeModal();go('quest')">ARISE</button>`);
+  renderHeader();
+}
+
+function vStats(){
+  const weighIns=S.weights.length;
+  const attrs=[
+    ["STR — total volume",       Math.min(100, Math.floor(S.tonnage/3000)+10)],
+    ["VIT — dungeons cleared",   Math.min(100, S.quests*2+10)],
+    ["AGI — endurance",          Math.min(100, S.cardioDone*4+S.cardioLvl*2+8)],
+    ["DISCIPLINE — daily quests",Math.min(100, S.daily.count*2+10)],
+    ["SENSE — weigh-ins",        Math.min(100, weighIns*2+10)],
+    ["WILL — best streak",       Math.min(100, S.bestStreak*4+10)],
+  ];
+  const prs = Object.entries(S.ex).filter(([,v])=>v.calibrated)
+    .map(([id,v])=>{const d=exDef(id); return d?`<div class="goalrow"><span class="gname">${d.name}</span><span class="gval">${v.weight} lb <small style="color:var(--dim)">(e1RM ${v.best})</small></span></div>`:"";}).join("");
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>STATUS WINDOW</div>
+      <div class="pbody">
+        <div class="rankbig"><small>HUNTER RANK</small><span class="r">${rankOf(S.level)}</span></div>
+        <div class="statgrid">
+          <div class="stat"><small>LEVEL</small><b>${S.level}</b></div>
+          <div class="stat"><small>TOTAL XP</small><b>${S.totalXp.toLocaleString()}</b></div>
+          <div class="stat"><small>DUNGEONS CLEARED</small><b>${S.quests+S.cardioDone}</b></div>
+          <div class="stat"><small>DAILY QUESTS</small><b>${S.daily.count}</b></div>
+          <div class="stat"><small>VOLUME LIFTED</small><b>${Math.round(S.tonnage/1000)}k lb</b></div>
+          <div class="stat"><small>STREAK / BEST</small><b>${S.streak} / ${S.bestStreak}</b></div>
+          <div class="stat"><small>ENDURANCE LV</small><b>${S.cardioLvl}</b></div>
+          <div class="stat"><small>BEST RUN</small><b>${S.daily.bestKm?S.daily.bestKm+" km":"—"}</b></div>
+        </div>
+        ${attrs.map(([n,v])=>`<div class="attr"><div class="attrhead"><span>${n}</span><b>${v}</b></div>
+          <div class="abar"><div class="afill" style="width:${v}%"></div></div></div>`).join("")}
+      </div></div>
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>CURRENT WORKING WEIGHTS</div>
+      <div class="pbody">${prs||`<div class="muted">No lifts calibrated yet. Clear your first quests — the System is watching.</div>`}</div></div>`;
+}
+
+function vWeight(){
+  const ws=S.weights;
+  let chart="", list="", summary="";
+  if(ws.length){
+    const last=ws[ws.length-1], first=ws[0];
+    const prev=ws.length>1?ws[ws.length-2]:null;
+    const dTot=(last.lbs-first.lbs);
+    const dLast=prev?(last.lbs-prev.lbs):null;
+    const col=d=>d<0?'var(--good)':d>0?'var(--bad)':'#fff';
+    summary=`<div class="statgrid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="stat"><small>CURRENT</small><b style="font-size:16px">${last.lbs} lb</b></div>
+      <div class="stat"><small>VS LAST</small><b style="font-size:16px;color:${dLast===null?'#fff':col(dLast)}">${dLast===null?"—":(dLast>0?"+":"")+dLast.toFixed(1)+" lb"}</b></div>
+      <div class="stat"><small>SINCE START</small><b style="font-size:16px;color:${col(dTot)}">${dTot>0?"+":""}${dTot.toFixed(1)} lb</b></div>
+    </div>`;
+    chart=drawChart(ws.slice(-60));
+    list=ws.slice().reverse().map((w,i,arr)=>{
+      const prv = arr[i+1];
+      const d = prv? (w.lbs-prv.lbs) : 0;
+      const cls = d<0?"dn":d>0?"up":"eq";
+      return `<div class="wl"><span class="d">${w.d}</span><span><b>${w.lbs} lb</b>
+        ${prv?`<span class="delta ${cls}"> ${d>0?"+":""}${d.toFixed(1)}</span>`:""}</span></div>`;
+    }).join("");
+  } else summary=`<div class="muted" style="text-align:center;padding:6px 0">Log your first weigh-in. Downward trend earns bonus XP.</div>`;
+  if(!chart) chart=`
+    <div style="height:170px;border:1px dashed rgba(177,108,255,.4);background:rgba(0,0,0,.25);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+      <span style="letter-spacing:4px;font-size:12px;color:var(--pb);text-shadow:0 0 8px var(--p)">⚠ INSUFFICIENT DATA</span>
+      <span class="muted" style="font-size:10px;letter-spacing:1px">TREND GRAPH UNLOCKS AT 2+ WEIGH-INS${ws.length===1?" — 1 LOGGED":""}</span>
+    </div>`;
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>BODY WEIGHT</div>
+      <div class="pbody">
+        <div class="wrow">
+          <input class="cin" style="flex:1;width:auto" type="number" inputmode="decimal" step="0.1" id="win" placeholder="Today's weight (lb)">
+          <button class="logbtn" style="margin:0;padding:11px 16px" onclick="addWeight()">LOG</button>
+        </div>
+        <div style="margin-top:12px">${chart}</div>
+        <div style="margin-top:10px">${summary}</div>
+        <div class="wlist">${list}</div>
+      </div></div>`;
+}
+function addWeight(){
+  const v=parseFloat(document.getElementById("win").value);
+  if(!(v>0)) return;
+  const t=todayStr();
+  const existing=S.weights.find(w=>w.d===t);
+  if(existing) existing.lbs=v;
+  else{
+    S.weights.push({d:t,lbs:v});
+    if(S.lastWeighXp!==t){
+      S.lastWeighXp=t;
+      const prev=S.weights.length>1?S.weights[S.weights.length-2].lbs:null;
+      const bonus=(prev!==null && v<prev)?15:0;
+      gainXp(10+bonus,true);
+      if(bonus) modal(`<h2>⚠ NOTIFICATION</h2><div>Weigh-in logged.<br><b class="good">Weight down — +${10+bonus} XP</b></div><button class="btn" onclick="closeModal()">OK</button>`);
+    }
+  }
+  save(); vWeight(); renderHeader();
+}
+function drawChart(ws){
+  if(ws.length<2) return "";
+  const W=480,H=170,P=26;
+  const vals=ws.map(w=>w.lbs);
+  let mn=Math.min(...vals), mx=Math.max(...vals);
+  if(mx-mn<2){mx+=1;mn-=1;}
+  const X=i=>P+ i*(W-2*P)/(ws.length-1);
+  const Y=v=>H-P-(v-mn)*(H-2*P)/(mx-mn);
+  const pts=ws.map((w,i)=>`${X(i).toFixed(1)},${Y(w.lbs).toFixed(1)}`).join(" ");
+  const dots=ws.map((w,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(w.lbs).toFixed(1)}" r="2.6" fill="#d8b4fe"/>`).join("");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="rgba(177,108,255,.35)"/>
+    <text x="${P}" y="${Y(mx)-6}" fill="#9f8bc9" font-size="10">${mx}</text>
+    <text x="${P}" y="${Y(mn)+13}" fill="#9f8bc9" font-size="10">${mn}</text>
+    <polyline points="${pts}" fill="none" stroke="#b16cff" stroke-width="2.2" style="filter:drop-shadow(0 0 4px #b16cff)"/>
+    ${dots}</svg>`;
+}
+
+function vLog(){
+  const ents=S.log.slice(0,40).map(l=>`<div class="logent">
+    <div class="lh"><b>${l.name}</b><span>${l.d} · +${l.xp} XP</span></div>
+    <div class="ld">${l.det}</div></div>`).join("");
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>QUEST LOG</div>
+      <div class="pbody">${ents||`<div class="muted">No quests cleared yet.</div>`}</div></div>`;
+}
+
+function vSys(){
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>⚙</span></div>SYSTEM</div>
+      <div class="pbody">
+        <div class="sect">BACKUP</div>
+        <div class="muted" style="font-size:11px;line-height:1.6">All data lives in this browser only. Export a backup occasionally — clearing browser data erases progress.</div>
+        <button class="btn ghost" onclick="exportData()">EXPORT DATA (download file)</button>
+        <div class="sect">RESTORE</div>
+        <textarea class="io" id="imp" placeholder="Paste an exported backup here…"></textarea>
+        <button class="btn ghost" onclick="importData()">IMPORT DATA</button>
+        <div class="sect">DANGER ZONE</div>
+        <button class="btn danger" onclick="resetAll()">RESET ALL DATA</button>
+      </div></div>`;
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(S)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`system-backup-${todayStr()}.json`;
+  a.click();
+}
+function importData(){
+  try{
+    const d=JSON.parse(document.getElementById("imp").value);
+    if(typeof d.level!=="number") throw 0;
+    S=Object.assign(defaultState(),d); save();
+    modal(`<h2>⚠ SYSTEM</h2><div class="good">Data restored.</div><button class="btn" onclick="closeModal();go('quest')">OK</button>`);
+    renderHeader();
+  }catch(e){
+    modal(`<h2>⚠ SYSTEM</h2><div class="muted">Invalid backup data.</div><button class="btn" onclick="closeModal()">OK</button>`);
+  }
+}
+function resetAll(){
+  modal(`<h2>⚠ WARNING</h2><div>Erase ALL progress, history and calibration?<br><span class="muted">This cannot be undone.</span></div>
+    <button class="btn danger" onclick="S=defaultState();save();closeModal();renderHeader();go('quest')">ERASE EVERYTHING</button>
+    <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
+}
+
+const VIEWS={quest:vQuest, workout:vWorkout, stats:vStats, weight:vWeight, log:vLog, sys:vSys};
+renderHeader(); renderNav();
+if(S.session) go("workout"); else go("quest");
+if("serviceWorker" in navigator && location.protocol.indexOf("http")===0){
+  navigator.serviceWorker.register("./sw.js").catch(function(){});
+}
+</script>
+</body>
+</html>
