@@ -81,7 +81,8 @@ main{flex:1;padding:14px}
   color:#fff;font-size:14px;font-weight:600;background:transparent;border:2px solid #fff;border-radius:50%;
   box-shadow:0 0 12px var(--p), inset 0 0 8px rgba(177,108,255,.55);text-shadow:0 0 6px var(--p);
 }
-.diamond span{display:block;line-height:1}
+.diamond span{display:block;line-height:1;transform:translateY(-0.5px)}
+.diamond span.gear{transform:translate(0,-1.5px);font-size:12px}
 .pbody{padding:14px}
 .qname{font-size:20px;letter-spacing:3px;color:#fff;text-shadow:0 0 12px var(--p);text-align:center;margin:6px 0 2px;font-weight:700}
 .qsub{text-align:center;color:var(--dim);font-size:11px;letter-spacing:2px;margin-bottom:12px}
@@ -107,7 +108,7 @@ main{flex:1;padding:14px}
 .setrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed rgba(177,108,255,.2)}
 .setnum{width:20px;flex:0 0 20px;text-align:center;font-size:11px;color:var(--dim)}
 .setrow.done .setnum{color:var(--good)}
-.wtag{min-width:70px;font-size:14px;color:var(--pb);font-weight:600}
+.wtag{min-width:70px;font-size:13px;color:var(--pb);font-weight:600}
 .wtag small{font-size:9px;color:var(--dim)}
 .repctl{display:flex;align-items:center;gap:2px;margin-left:auto}
 .repctl button{
@@ -133,6 +134,9 @@ main{flex:1;padding:14px}
 .xmark{font-size:12px;color:var(--dim)}
 .cbig{text-align:center;font-size:36px;color:#fff;text-shadow:0 0 14px var(--p);margin:8px 0;font-weight:700}
 .intv{display:flex;justify-content:space-between;padding:8px 6px;border-bottom:1px dashed rgba(177,108,255,.25);font-size:13px}
+.tmrbig{font-size:64px;text-align:center;color:#fff;text-shadow:0 0 24px var(--p),0 0 60px rgba(177,108,255,.5);font-weight:300;letter-spacing:4px;margin:14px 0}
+.phaselbl{text-align:center;font-size:19px;letter-spacing:7px;color:var(--pb);text-shadow:0 0 12px var(--p);margin-top:8px}
+.nextlbl{text-align:center;font-size:10px;letter-spacing:2px;color:var(--dim);margin-top:4px}
 .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
 .stat{border:1px solid rgba(177,108,255,.4);background:rgba(0,0,0,.25);padding:10px;text-align:center}
 .stat small{font-size:9px;letter-spacing:2px;color:var(--dim);display:block}
@@ -205,7 +209,7 @@ nav button.on{color:#fff;text-shadow:0 0 8px var(--p)}
 .panel.red .ptitle{background:linear-gradient(90deg,rgba(248,113,113,.3),transparent);border-color:rgba(248,113,113,.45);text-shadow:0 0 8px var(--bad)}
 .panel.red .diamond{background:#b91c1c;box-shadow:0 0 10px var(--bad)}
 .dq .setrow{cursor:pointer}
-.dq .gname{flex:none;font-size:14px}
+.dq .gname{flex:none;font-size:13px}
 .clearbanner{text-align:center;padding:14px 0;color:var(--good);letter-spacing:3px;font-size:13px;text-shadow:0 0 10px rgba(74,222,128,.6)}
 .streakchip{
   position:absolute;top:10px;right:10px;z-index:3;
@@ -216,7 +220,7 @@ nav button.on{color:#fff;text-shadow:0 0 8px var(--p)}
 .streakchip.zero{color:var(--dim);border-color:rgba(177,108,255,.35);box-shadow:none;text-shadow:none}
 .muted{color:var(--dim);font-size:12px}
 .gold{color:var(--gold)} .good{color:var(--good)}
-textarea.io{width:100%;height:110px;background:rgba(0,0,0,.5);border:1px solid rgba(177,108,255,.5);color:var(--txt);font-size:10px;padding:8px;font-family:monospace}
+textarea.io{width:100%;height:90px;background:rgba(0,0,0,.5);border:1px solid rgba(177,108,255,.5);color:var(--txt);font-size:10px;padding:8px;font-family:monospace;margin-top:10px}
 .sect{font-size:10px;letter-spacing:3px;color:var(--dim);margin:16px 0 6px}
 </style>
 </head>
@@ -227,7 +231,7 @@ textarea.io{width:100%;height:110px;background:rgba(0,0,0,.5);border:1px solid r
     <noscript>
       <div style="border:1px solid #f87171;padding:16px;margin-top:20px;color:#f87171;text-align:center;letter-spacing:2px;font-size:13px">
         ⚠ JAVASCRIPT IS DISABLED IN THIS VIEWER<br>
-        <span style="font-size:11px;color:#9f8bc9">This app needs a viewer that runs JavaScript. Try a different app or browser.</span>
+        <span style="font-size:11px;color:#9f8bc9">This app needs a viewer that runs JavaScript.</span>
       </div>
     </noscript>
     <div id="bootmsg" style="text-align:center;padding:40px 10px;color:#9f8bc9;letter-spacing:3px;font-size:12px">INITIALIZING…</div>
@@ -238,6 +242,7 @@ textarea.io{width:100%;height:110px;background:rgba(0,0,0,.5);border:1px solid r
 
 <script>
 "use strict";
+/* THE SYSTEM v2 */
 window.onerror = function(msg, src, line){
   var v=document.getElementById("view");
   if(v) v.innerHTML='<div style="border:1px solid #f87171;padding:16px;margin-top:20px;color:#f87171;font-size:12px;letter-spacing:1px">⚠ SYSTEM ERROR<br><span style="color:#9f8bc9">'+msg+' (line '+line+')</span><br><br><span style="color:#9f8bc9">Screenshot this and send it to get it fixed.</span></div>';
@@ -254,36 +259,58 @@ function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ storageBlocked=t
 
 const KEY = "theSystem_v1";
 const todayStr = () => new Date().toLocaleDateString("en-CA");
+function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
 
-const DAYS = [
- { name:"BACK & BICEPS", ex:[
-   {id:"latpull", name:"Lat Pulldown",             sets:4, lo:8,  hi:12, inc:5},
+/* ---------- gates: each lift gate has A and B workouts ---------- */
+const DAYS=[
+ {name:"BACK & BICEPS", ab:[
+  [{id:"latpull", name:"Lat Pulldown",             sets:4, lo:8,  hi:12, inc:5},
    {id:"row",     name:"Seated Cable Row",         sets:3, lo:8,  hi:12, inc:5},
    {id:"dbrow",   name:"One-Arm Dumbbell Row",     sets:3, lo:10, hi:12, inc:5,  note:"per arm"},
    {id:"bbcurl",  name:"Barbell Curl",             sets:3, lo:8,  hi:12, inc:5},
-   {id:"hcurl",   name:"Hammer Curl",              sets:3, lo:10, hi:15, inc:5,  note:"per dumbbell"},
+   {id:"hcurl",   name:"Hammer Curl",              sets:3, lo:10, hi:15, inc:5,  note:"per dumbbell"}],
+  [{id:"bbrow",   name:"Barbell Row",              sets:4, lo:8,  hi:12, inc:5},
+   {id:"ngpull",  name:"Neutral-Grip Pulldown",    sets:3, lo:8,  hi:12, inc:5},
+   {id:"csrow",   name:"Chest-Supported Row",      sets:3, lo:10, hi:12, inc:5},
+   {id:"incurl",  name:"Incline DB Curl",          sets:3, lo:10, hi:15, inc:5,  note:"per dumbbell"},
+   {id:"ccurl",   name:"Cable Curl",               sets:3, lo:10, hi:15, inc:5}]
  ]},
- { name:"LEGS", ex:[
-   {id:"squat",   name:"Barbell Back Squat",       sets:4, lo:6,  hi:10, inc:10},
+ {name:"LEGS", ab:[
+  [{id:"squat",   name:"Barbell Back Squat",       sets:4, lo:6,  hi:10, inc:10},
    {id:"rdl",     name:"Romanian Deadlift",        sets:3, lo:8,  hi:12, inc:10},
    {id:"legpress",name:"Leg Press",                sets:3, lo:10, hi:15, inc:10},
    {id:"legcurl", name:"Lying Leg Curl",           sets:3, lo:10, hi:15, inc:5},
-   {id:"calf",    name:"Standing Calf Raise",      sets:4, lo:12, hi:20, inc:10},
+   {id:"calf",    name:"Standing Calf Raise",      sets:4, lo:12, hi:20, inc:10}],
+  [{id:"hack",    name:"Hack Squat",               sets:4, lo:8,  hi:12, inc:10},
+   {id:"bss",     name:"Bulgarian Split Squat",    sets:3, lo:10, hi:12, inc:5,  note:"per leg, DBs"},
+   {id:"hthrust", name:"Hip Thrust",               sets:3, lo:10, hi:15, inc:10},
+   {id:"legext",  name:"Leg Extension",            sets:3, lo:12, hi:15, inc:5},
+   {id:"scalf",   name:"Seated Calf Raise",        sets:4, lo:12, hi:20, inc:5}]
  ]},
- { name:"SHOULDERS & ARMS", ex:[
-   {id:"ohp",     name:"Seated DB Shoulder Press", sets:4, lo:8,  hi:12, inc:5,  note:"per dumbbell"},
+ {name:"SHOULDERS & ARMS", ab:[
+  [{id:"ohp",     name:"Seated DB Shoulder Press", sets:4, lo:8,  hi:12, inc:5,  note:"per dumbbell"},
    {id:"latraise",name:"Lateral Raise",            sets:4, lo:12, hi:20, inc:5,  note:"per dumbbell"},
    {id:"facepull",name:"Face Pull",                sets:3, lo:12, hi:15, inc:5},
    {id:"ezcurl",  name:"EZ-Bar Curl",              sets:3, lo:8,  hi:12, inc:5},
-   {id:"skull",   name:"Skull Crusher",            sets:3, lo:8,  hi:12, inc:5},
+   {id:"skull",   name:"Skull Crusher",            sets:3, lo:8,  hi:12, inc:5}],
+  [{id:"bohp",    name:"Barbell Overhead Press",   sets:4, lo:6,  hi:10, inc:5},
+   {id:"clat",    name:"Cable Lateral Raise",      sets:4, lo:12, hi:20, inc:5,  note:"per arm"},
+   {id:"rpd",     name:"Reverse Pec Deck",         sets:3, lo:12, hi:15, inc:5},
+   {id:"pcurl",   name:"Preacher Curl",            sets:3, lo:10, hi:12, inc:5},
+   {id:"dips",    name:"Dips",                     sets:3, lo:6,  hi:10, inc:5,  assist:true, note:"assist = negative lb"}]
  ]},
- { name:"ENDURANCE TRAINING", cardio:true },
- { name:"CHEST & TRICEPS", ex:[
-   {id:"bench",   name:"Barbell Bench Press",      sets:4, lo:6,  hi:10, inc:5},
+ {name:"ENDURANCE TRAINING", cardio:true},
+ {name:"CHEST & TRICEPS", ab:[
+  [{id:"bench",   name:"Barbell Bench Press",      sets:4, lo:6,  hi:10, inc:5},
    {id:"incdb",   name:"Incline Dumbbell Press",   sets:3, lo:8,  hi:12, inc:5,  note:"per dumbbell"},
    {id:"fly",     name:"Cable Fly",                sets:3, lo:12, hi:15, inc:5},
    {id:"pushdn",  name:"Triceps Rope Pushdown",    sets:3, lo:10, hi:15, inc:5},
-   {id:"ohext",   name:"Overhead Cable Extension", sets:3, lo:10, hi:15, inc:5},
+   {id:"ohext",   name:"Overhead Cable Extension", sets:3, lo:10, hi:15, inc:5}],
+  [{id:"incbb",   name:"Incline Barbell Bench",    sets:4, lo:6,  hi:10, inc:5},
+   {id:"mcp",     name:"Machine Chest Press",      sets:3, lo:8,  hi:12, inc:5},
+   {id:"pecdeck", name:"Pec Deck",                 sets:3, lo:12, hi:15, inc:5},
+   {id:"cgb",     name:"Close-Grip Bench Press",   sets:3, lo:8,  hi:12, inc:5},
+   {id:"sapd",    name:"Single-Arm Pushdown",      sets:3, lo:10, hi:15, inc:5,  note:"per arm"}]
  ]},
 ];
 const DAYLBL=["MON","TUE","WED","THU","FRI"];
@@ -291,6 +318,7 @@ function gateForToday(){
   const wd=new Date().getDay();
   return (wd>=1 && wd<=5) ? wd-1 : null;
 }
+function exList(i,v){ return DAYS[i].ab[v?1:0]; }
 
 const CARDIO = [
  {run:1,  walk:2,  rounds:7}, {run:1.5,walk:1.5,rounds:7}, {run:2,  walk:1,  rounds:7},
@@ -300,7 +328,18 @@ const CARDIO = [
  {run:30, walk:0,  rounds:1},
 ];
 
-const RANKS = [["E",0],["D",5],["C",10],["B",18],["A",28],["S",40]];
+const RANKS = [["E",0],["D",10],["C",25],["B",45],["A",60],["S",75],["SS",88],["SSS",100]];
+
+/* ---------- difficulty profiles ---------- */
+const PROFILES={
+ hunter:  {lbl:"HUNTER",   push:"Push-ups",       sit:"Sit-ups",       run:"Run",
+           base:[50,15], cap:[100,30], repStep:5, repPer:3, minPer:2, penExtra:10, dist:true},
+ awakened:{lbl:"AWAKENED", push:"Push-ups (knees ok)", sit:"Crunches", run:"Jog / brisk walk",
+           base:[20,10], cap:[50,25],  repStep:3, repPer:3, minPer:2, penExtra:8,  dist:false},
+ trainee: {lbl:"TRAINEE",  push:"Wall push-ups",  sit:"Sit-to-stands", run:"Walk",
+           base:[8,10],  cap:[25,25],  repStep:2, repPer:3, minPer:2, penExtra:5,  dist:false},
+};
+function prof(){ return PROFILES[S.profile]||PROFILES.hunter; }
 
 function defaultDaily(){
   return { count:0, lastComplete:null, penalty:false, penClear:null,
@@ -309,7 +348,9 @@ function defaultDaily(){
 function defaultState(){
   return { level:1, xp:0, totalXp:0, quests:0, cardioDone:0, tonnage:0,
            streak:0, bestStreak:0, lastDone:null, lastWeighXp:null,
-           cycle:0, ex:{}, cardioLvl:1, weights:[], log:[], session:null,
+           name:null, profile:"hunter", gateVar:[0,0,0,0,0],
+           lastBackup:null, bkSnooze:null, decayNote:null,
+           ex:{}, cardioLvl:1, weights:[], log:[], session:null,
            daily: defaultDaily() };
 }
 let S;
@@ -317,27 +358,38 @@ try { S = JSON.parse(lsGet(KEY)) || defaultState(); }
 catch(e){ S = defaultState(); }
 if(!S.daily) S.daily = defaultDaily();
 if(!Array.isArray(S.daily.parts) || typeof S.daily.parts[0]!=="number") S.daily.parts=[0,0,0];
+if(S.name===undefined) S.name=null;
+if(!S.profile) S.profile="hunter";
+if(!Array.isArray(S.gateVar)) S.gateVar=[0,0,0,0,0];
+if(S.lastBackup===undefined){ S.lastBackup=null; S.bkSnooze=null; }
+for(const id in S.ex){ const st=S.ex[id]; if(st.calibrated && !st.base) st.base=st.best||0; }
 function save(){ lsSet(KEY, JSON.stringify(S)); }
 
-const exDef = id => { for(const d of DAYS){ if(d.ex) for(const e of d.ex) if(e.id===id) return e; } return null; };
-const exSt  = id => { if(!S.ex[id]) S.ex[id]={calibrated:false,weight:0,fails:0,best:0}; return S.ex[id]; };
-const round5 = w => Math.max(5, Math.round(w/5)*5);
+const exDef = id => { for(const d of DAYS){ if(d.ab) for(const arr of d.ab) for(const e of arr) if(e.id===id) return e; } return null; };
+const exSt  = id => { if(!S.ex[id]) S.ex[id]={calibrated:false,weight:0,fails:0,best:0,base:0}; return S.ex[id]; };
+const round5  = w => Math.max(5, Math.round(w/5)*5);
+const round5a = w => Math.round(w/5)*5;
 const e1rm = (w,r) => w*(1+r/30);
+const fw = w => w<0 ? Math.abs(w)+" lb assist" : w+" lb";
 
 function rankOf(lv){ let r="E"; for(const [n,min] of RANKS) if(lv>=min) r=n; return r; }
 function xpNeed(lv){ return 100 + (lv-1)*50; }
-function gainXp(amount, silently){
+let pendingRank=null;
+function gainXp(amount){
   S.xp += amount; S.totalXp += amount;
-  const ups=[];
-  while(S.xp >= xpNeed(S.level)){ S.xp -= xpNeed(S.level); S.level++; ups.push(S.level); }
+  const rb=rankOf(S.level);
+  while(S.xp >= xpNeed(S.level)){ S.xp -= xpNeed(S.level); S.level++; }
+  if(rankOf(S.level)!==rb) pendingRank=rankOf(S.level);
   save(); renderHeader();
-  if(ups.length && !silently){
-    const nl = ups[ups.length-1];
-    modal(`<h2>⚠ NOTIFICATION</h2><div class="muted">You have grown stronger.</div>
-      <div class="big">LEVEL ${nl}</div>
-      <div class="muted">RANK&nbsp;<span class="gold">${rankOf(nl)}</span></div>
-      <button class="btn" onclick="closeModal()">ARISE</button>`);
-  }
+}
+function finishClear(){
+  if(pendingRank){
+    const r=pendingRank; pendingRank=null;
+    modal(`<h2>⚠ NOTIFICATION</h2><div class="muted">Your rank has increased.</div>
+      <div class="big" style="font-size:46px;padding:10px 34px">${r}</div>
+      <div class="muted">HUNTER RANK</div>
+      <button class="btn" onclick="closeModal();go('quest')">ARISE</button>`);
+  } else { closeModal(); go("quest"); }
 }
 
 function modal(html){ document.getElementById("mbody").innerHTML=html; document.getElementById("ovl").classList.add("show"); }
@@ -348,7 +400,7 @@ function renderHeader(){
   document.getElementById("hdr").innerHTML=`
     <div class="lvlbox"><small>LV</small><b>${S.level}</b></div>
     <div class="hmeta">
-      <div class="hname">PLAYER&nbsp;·&nbsp;ADAM</div>
+      <div class="hname">PLAYER&nbsp;·&nbsp;${S.name||"HUNTER"}</div>
       <div class="hrank">HUNTER RANK&nbsp;<b>${rankOf(S.level)}</b></div>
       <div class="xpbar"><div class="xpfill" style="width:${pct}%"></div></div>
       <div class="xptxt">${S.xp} / ${need} XP</div>
@@ -363,20 +415,49 @@ function renderNav(){
 }
 function go(v){ curView=v; renderNav(); VIEWS[v](); window.scrollTo(0,0); }
 
-function dailyTargets(){
-  const c=S.daily.count;
-  return { reps:Math.min(100, 50+Math.floor(c/3)*5),
-           run: Math.min(30, 15+Math.floor(c/2)) };
+/* ---------- name / profile ---------- */
+function askName(first){
+  modal(`<h2>⚠ SYSTEM</h2><div class="muted">State your name, Hunter.</div>
+    <input class="cin" style="width:80%;margin:12px 0" id="nmIn" maxlength="14" placeholder="NAME" value="${first?"":(S.name||"")}">
+    <div class="muted" style="font-size:11px;margin:4px 0 8px">TRAINING PROFILE</div>
+    ${Object.entries(PROFILES).map(([k,p])=>`
+      <button class="btn ${S.profile===k?"":"ghost"}" style="margin-top:6px;font-size:11px" onclick="pickProf('${k}')">${p.lbl} — ${p.base[0]}/${p.base[0]} reps · ${p.base[1]} min ${p.run.toLowerCase()}</button>`).join("")}
+    <button class="btn" style="margin-top:14px" onclick="saveName()">REGISTER</button>`);
 }
+function pickProf(k){ S.profile=k; save(); askName(false); }
+function saveName(){
+  const el=document.getElementById("nmIn");
+  const v=(el&&el.value||"").trim().toUpperCase();
+  S.name=v||S.name||"HUNTER"; save(); closeModal(); renderHeader(); go("quest");
+}
+
+/* ---------- daily quest ---------- */
+function dailyTargets(){
+  const p=prof(), c=S.daily.count;
+  return { reps:Math.min(p.cap[0], p.base[0]+Math.floor(c/p.repPer)*p.repStep),
+           run: Math.min(p.cap[1], p.base[1]+Math.floor(c/p.minPer)) };
+}
+function dailyGoals(){ const dt=dailyTargets(); return [dt.reps, dt.reps, dt.run]; }
 function checkPenalty(){
+  const t=todayStr();
   const y=new Date(); y.setDate(y.getDate()-1);
   const yStr=y.toLocaleDateString("en-CA");
   const anchor=[S.daily.lastComplete,S.daily.penClear].filter(Boolean).sort().pop();
-  if(!S.daily.penalty && anchor && anchor<yStr){ S.daily.penalty=true; S.streak=0; save(); }
+  if(!S.daily.penalty && anchor && anchor<yStr){
+    const gap=dayDiff(anchor,t);
+    S.daily.penalty=true; S.streak=0;
+    if(gap>=7){
+      const before=S.daily.count;
+      S.daily.count=Math.max(0,S.daily.count-2*(gap-6));
+      if(S.daily.count<before) S.decayNote=`EXTENDED ABSENCE — ${gap} DAYS. DAILY TARGETS RECALIBRATED DOWNWARD.`;
+    }
+    save();
+  }
 }
-function dailyGoals(){
-  const dt=dailyTargets();
-  return [dt.reps, dt.reps, dt.run];
+function creditRun(m){
+  if(S.daily.lastComplete===todayStr()) return;
+  const g=dailyGoals();
+  S.daily.parts[2]=Math.min(g[2], S.daily.parts[2]+m); save();
 }
 function addDaily(i,n){
   if(S.daily.lastComplete===todayStr()) return;
@@ -389,7 +470,7 @@ function addDaily(i,n){
 function completeDaily(){
   const goals=dailyGoals();
   if(!S.daily.parts.every((v,j)=>v>=goals[j])) return;
-  const t=todayStr(), dt=dailyTargets();
+  const t=todayStr(), dt=dailyTargets(), p=prof();
   const kmEl=document.getElementById("dkm");
   if(kmEl){ const km=parseFloat(kmEl.value); if(km>0 && km>S.daily.bestKm) S.daily.bestKm=km; }
   const y=new Date(); y.setDate(y.getDate()-1);
@@ -406,56 +487,175 @@ function completeDaily(){
   }
   const xp=50+Math.min(S.streak,25);
   S.log.unshift({d:t, name:"DAILY QUEST", xp,
-    det:`Push-ups ${dt.reps} · Sit-ups ${dt.reps} · Run ${dt.run>=30?"30+ min":dt.run+" min"}`});
-  const lvBefore=S.level;
-  gainXp(xp,true); save();
+    det:`${p.push} ${dt.reps} · ${p.sit} ${dt.reps} · ${p.run} ${dt.run>=p.cap[1]&&p.dist?"30+ min":dt.run+" min"}`});
+  gainXp(xp); save();
   modal(`<h2>⚠ DAILY QUEST CLEAR</h2>
     <div class="big">+${xp} XP</div>
-    ${S.level>lvBefore?`<div>LEVEL UP → <b class="gold">LV ${S.level} · RANK ${rankOf(S.level)}</b></div>`:""}
     ${streakMsg}
-    <button class="btn" onclick="closeModal();go('quest')">ARISE</button>`);
+    <button class="btn" onclick="finishClear()">COMPLETE</button>`);
   renderHeader();
 }
 function clearPenalty(){
-  modal(`<h2>⚠ SYSTEM</h2><div>Confirm: penalty run completed without stopping?</div>
+  modal(`<h2>⚠ SYSTEM</h2><div>Confirm: penalty ${prof().run.toLowerCase()} completed without stopping?</div>
     <button class="btn" onclick="doClearPenalty()">CONFIRMED</button>
     <button class="btn ghost" onclick="closeModal()">NOT YET</button>`);
 }
 function doClearPenalty(){
   S.daily.penalty=false; S.daily.penClear=todayStr();
-  S.log.unshift({d:todayStr(), name:"PENALTY QUEST", xp:20, det:"Penalty run cleared. Streak unlocked."});
-  gainXp(20,true); save(); closeModal(); go("quest");
+  S.log.unshift({d:todayStr(), name:"PENALTY QUEST", xp:20, det:"Penalty cleared. Streak unlocked."});
+  gainXp(20); save(); closeModal(); go("quest");
+}
+/* ---------- audio + timer ---------- */
+let ACTX=null, WL=null, TMR=null;
+function initAudio(){
+  try{ if(!ACTX) ACTX=new (window.AudioContext||window.webkitAudioContext)(); if(ACTX.state==="suspended") ACTX.resume(); }catch(e){}
+}
+function tone(f,d,off){
+  if(!ACTX) return;
+  try{
+    const o=ACTX.createOscillator(), g=ACTX.createGain();
+    o.type="sine"; o.frequency.value=f; o.connect(g); g.connect(ACTX.destination);
+    const t=ACTX.currentTime+off;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.5,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.start(t); o.stop(t+d+0.05);
+  }catch(e){}
+}
+function cue(p){
+  if(p==="run"){ tone(880,.18,0); tone(880,.18,.3); }
+  else if(p==="walk"){ tone(440,.5,0); }
+  else { tone(660,.2,0); tone(660,.2,.35); tone(660,.2,.7); }
+}
+async function lockScreen(){ try{ if(navigator.wakeLock) WL=await navigator.wakeLock.request("screen"); }catch(e){} }
+function unlockScreen(){ try{ if(WL){ WL.release(); WL=null; } }catch(e){} }
+document.addEventListener("visibilitychange",()=>{ if(TMR && document.visibilityState==="visible") lockScreen(); });
+
+function startTimer(phases,mode){
+  initAudio(); lockScreen();
+  TMR={phases,mode,idx:0,rem:phases[0].s,ranSec:0};
+  cue(phases[0].p);
+  TMR.int=setInterval(tick,1000);
+  vTimer();
+}
+function tick(){
+  if(!TMR) return;
+  TMR.rem--;
+  if(TMR.phases[TMR.idx].p==="run") TMR.ranSec++;
+  if(TMR.rem<=0){
+    TMR.idx++;
+    if(TMR.idx>=TMR.phases.length){ finishTimer(); return; }
+    TMR.rem=TMR.phases[TMR.idx].s; cue(TMR.phases[TMR.idx].p);
+  }
+  updTimer();
+}
+const fmtT = s => Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+function updTimer(){
+  const a=document.getElementById("tmrTime");
+  if(!a){ return; }
+  a.textContent=fmtT(TMR.rem);
+  document.getElementById("tmrPhase").textContent=TMR.phases[TMR.idx].l;
+  document.getElementById("tmrNext").textContent =
+    TMR.idx+1<TMR.phases.length ? "NEXT: "+TMR.phases[TMR.idx+1].l : "FINAL PHASE";
+}
+function vTimer(){
+  if(!TMR){ go("quest"); return; }
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>GUIDED TRAINING</div>
+      <div class="pbody" style="text-align:center">
+        <div class="phaselbl" id="tmrPhase">${TMR.phases[TMR.idx].l}</div>
+        <div class="tmrbig" id="tmrTime">${fmtT(TMR.rem)}</div>
+        <div class="nextlbl" id="tmrNext"></div>
+        <div class="muted" style="font-size:10px;margin-top:10px">Keep this screen open — cues beep at every phase change.<br>2 short beeps = run · 1 long = walk · 3 = finished</div>
+        <button class="btn danger" onclick="stopTimer()">STOP EARLY</button>
+      </div></div>`;
+  updTimer();
+}
+function stopTimer(){
+  if(!TMR) return;
+  clearInterval(TMR.int); unlockScreen();
+  const mode=TMR.mode, ranMin=Math.floor(TMR.ranSec/60);
+  TMR=null;
+  if(mode==="daily" && ranMin>0){ creditRun(ranMin); }
+  if(mode==="daily"){ go("quest"); } else { go("workout"); }
+}
+function finishTimer(){
+  clearInterval(TMR.int); cue("done"); unlockScreen();
+  const mode=TMR.mode, ranMin=Math.max(1,Math.round(TMR.ranSec/60));
+  TMR=null;
+  if(mode==="daily"){
+    creditRun(ranMin);
+    const g=dailyGoals();
+    const done = S.daily.parts.every((v,j)=>v>=g[j]);
+    if(done && S.daily.lastComplete!==todayStr()){ completeDaily(); }
+    else modal(`<h2>⚠ SYSTEM</h2><div class="good">${prof().run} complete — ${ranMin} min credited.</div>
+      <button class="btn" onclick="closeModal();go('quest')">COMPLETE</button>`);
+  } else {
+    if(S.session) S.session.timerDone=true;
+    save(); go("workout");
+  }
+}
+function startCardioTimer(){
+  const c=CARDIO[S.session.level-1];
+  const ph=[{l:"WARM-UP WALK",s:300,p:"walk"}];
+  for(let r=0;r<c.rounds;r++){
+    ph.push({l:"RUN",s:Math.round(c.run*60),p:"run"});
+    if(c.walk) ph.push({l:"WALK",s:Math.round(c.walk*60),p:"walk"});
+  }
+  ph.push({l:"COOL-DOWN WALK",s:300,p:"walk"});
+  startTimer(ph,"cardio");
+}
+function startDailyRun(){
+  const g=dailyGoals();
+  const rem=Math.max(1,g[2]-S.daily.parts[2]);
+  startTimer([{l:prof().run.toUpperCase(),s:rem*60,p:"run"}],"daily");
 }
 
+/* ---------- quest home ---------- */
 function vQuest(){
   checkPenalty();
-  const t=todayStr();
+  const t=todayStr(), p=prof();
   if(S.daily.todayD!==t){ S.daily.todayD=t; S.daily.parts=[0,0,0]; save(); }
+  const goals=dailyGoals();
+  if(S.daily.lastComplete!==t && S.daily.parts.some(v=>v>0) && S.daily.parts.every((v,j)=>v>=goals[j])){ completeDaily(); }
   const dt=dailyTargets();
   const dailyDone=S.daily.lastComplete===t;
-  const maxRun=dt.run>=30;
+  const maxRun=p.dist && dt.run>=p.cap[1];
 
   const storeWarn = storageBlocked ? `
     <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:12px;letter-spacing:1px">
       ⚠ THIS VIEWER BLOCKS SAVED DATA — progress will be lost when you close the app.<br>
       <span class="muted">Try opening the file in a different app or browser.</span></div></div>` : "";
 
+  const decayHtml = S.decayNote ? `
+    <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:11px;letter-spacing:1px">
+      ⚠ ${S.decayNote}</div></div>` : "";
+  if(S.decayNote){ S.decayNote=null; save(); }
+
+  const needBk = (S.lastBackup ? dayDiff(S.lastBackup,t)>=30 : (S.daily.count+S.quests)>=8)
+              && (!S.bkSnooze || dayDiff(S.bkSnooze,t)>=7);
+  const bkHtml = needBk ? `
+    <div class="panel"><div class="pbody" style="text-align:center">
+      <div style="font-size:11px;letter-spacing:2px;color:var(--gold)">⚠ SYSTEM DIRECTIVE — BACK UP YOUR DATA</div>
+      <div class="muted" style="font-size:10px;margin-top:6px">Your progress lives only on this device. Export a copy.</div>
+      <button class="btn ghost" style="margin-top:10px" onclick="exportData();vQuest()">EXPORT NOW</button>
+      <button class="btn ghost" onclick="S.bkSnooze=todayStr();save();vQuest()">REMIND ME LATER</button>
+    </div></div>` : "";
+
   const penHtml = S.daily.penalty ? `
     <div class="panel red"><div class="ptitle"><div class="diamond"><span>!</span></div>PENALTY QUEST</div>
       <div class="pbody">
         <div class="qsub" style="color:var(--bad)">YOU FAILED TO COMPLETE THE DAILY QUEST</div>
-        <div class="goalrow"><span class="gname">Run without stopping</span><span class="gval" style="color:var(--bad)">${dt.run+10} min</span></div>
+        <div class="goalrow"><span class="gname">${p.run} without stopping</span><span class="gval" style="color:var(--bad)">${dt.run+p.penExtra} min</span></div>
         <div class="warn">STREAK LOCKED AT 0 UNTIL CLEARED</div>
         <button class="btn danger" onclick="clearPenalty()">PENALTY COMPLETE</button>
       </div></div>` : "";
 
-  const goals=dailyGoals();
-  const items=[["Push-ups","reps"],["Sit-ups","reps"],
-    [maxRun?"Run — push distance":"Run","min"]];
+  const items=[[p.push,"reps"],[p.sit,"reps"],[maxRun?p.run+" — push distance":p.run,"min"]];
   let dailyBody;
   if(dailyDone){
     dailyBody=`<div class="clearbanner">✓ DAILY QUEST CLEARED</div>
-      <div class="muted" style="text-align:center;font-size:11px">Completed ${S.daily.count}× · next targets: ${dailyTargets().reps} reps / ${dailyTargets().run>=30?"30+ min":dailyTargets().run+" min"} · resets at midnight</div>`;
+      <div class="muted" style="text-align:center;font-size:11px">Completed ${S.daily.count}× · next: ${dailyTargets().reps} reps / ${dailyTargets().run} min · resets at midnight</div>`;
   } else {
     dailyBody = items.map(([n,unit],i)=>{
       const v=S.daily.parts[i], g=goals[i], hit=v>=g;
@@ -475,6 +675,7 @@ function vQuest(){
           <button onclick="addDaily(${i},5)">+5</button>
         </div>
       </div>`;}).join("")
+      + (S.daily.parts[2]<goals[2] ? `<button class="btn ghost" style="font-size:11px" onclick="startDailyRun()">⏱ GUIDED ${p.run.toUpperCase()} — ${goals[2]-S.daily.parts[2]} MIN, BEEPS AT THE END</button>`:"")
       + (maxRun?`<div class="wrow" style="margin-top:8px">
           <span class="muted" style="font-size:11px">Distance (km, optional)</span>
           <input class="cin" type="number" inputmode="decimal" step="0.1" id="dkm" placeholder="${S.daily.bestKm||'km'}">
@@ -488,7 +689,6 @@ function vQuest(){
       <div class="pbody">${dailyBody}</div></div>`;
 
   const gi = gateForToday();
-  const day = gi===null ? null : DAYS[gi];
   const doneToday = S.lastDone === t;
   let inner;
   if(S.session){
@@ -499,8 +699,14 @@ function vQuest(){
   } else if(gi===null){
     inner = `<div class="qname">NO GATE TODAY</div>
       <div class="qsub">WEEKEND — MANDATORY RECOVERY</div>
-      <div class="muted" style="text-align:center;font-size:11px">Muscle is built while you rest. The daily quest still stands.<br>Missed a gate this week? Enter it from the schedule below.</div>`;
+      <div class="muted" style="text-align:center;font-size:11px">Muscle is built while you rest. The daily quest still stands.</div>`;
+  } else if(doneToday){
+    inner = `<div class="qname">GATE CLEARED</div>
+      <div class="qsub">RETURNS TOMORROW</div>
+      <div class="muted" style="text-align:center;font-size:11px">One dungeon per day. Recovery is part of the training.</div>`;
   } else {
+    const day=DAYS[gi];
+    const v=S.gateVar[gi]?1:0;
     let goals2;
     if(day.cardio){
       const c=CARDIO[Math.min(S.cardioLvl,CARDIO.length)-1];
@@ -509,29 +715,29 @@ function vQuest(){
         <div class="goalrow"><span class="gname">${c.walk?`Run ${c.run} min / walk ${c.walk} min`:`Run continuously`}</span>
         <span class="gval">${c.walk?`× ${c.rounds}`:`${c.run} min`}</span></div>
         <div class="goalrow"><span class="gname">Cool-down walk</span><span class="gval">5 min</span></div>
-        <div class="goalrow"><span class="gname">Total</span><span class="gval">≈ ${tot+10} min</span></div>`;
+        <div class="goalrow"><span class="gname">Total</span><span class="gval">≈ ${tot+10} min</span></div>
+        <div class="muted" style="font-size:10px;text-align:center;margin-top:6px">Run minutes auto-credit today's daily quest.</div>`;
     } else {
-      goals2 = day.ex.map(e=>{
+      goals2 = exList(gi,v).map(e=>{
         const st=exSt(e.id);
-        const w = st.calibrated ? `${st.weight} lb × ${e.lo}–${e.hi}` : `CALIBRATE · ${e.lo}–${e.hi} reps`;
+        const w = st.calibrated ? `${fw(st.weight)} × ${e.lo}–${e.hi}` : `CALIBRATE · ${e.lo}–${e.hi} reps`;
         return `<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${e.sets} × ${w}</span></div>`;
       }).join("");
     }
     inner = `<div class="qname">${day.name}</div>
-      <div class="qsub">${day.cardio?`ENDURANCE GATE · LEVEL ${S.cardioLvl}`:"STRENGTH GATE"}${doneToday?" · EXTRA RAID":""}</div>
+      <div class="qsub">${day.cardio?`ENDURANCE GATE · LEVEL ${S.cardioLvl}`:`STRENGTH GATE · WORKOUT ${v?"B":"A"}`}</div>
       ${goals2}
       ${day.cardio?`<div class="muted" style="font-size:10px;text-align:center;margin-top:8px">Zone 2 or VO2-max intervals of equal time also count.</div>`:""}
-      ${doneToday?`<div class="warn">A GATE WAS ALREADY CLEARED TODAY — REST IS ALSO TRAINING</div>`:""}
       <button class="btn" onclick="startQuestAt(${gi})">ENTER DUNGEON</button>`;
   }
-  document.getElementById("view").innerHTML = storeWarn + penHtml + dailyHtml + `
+  document.getElementById("view").innerHTML = storeWarn + decayHtml + penHtml + dailyHtml + `
     <div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>DUNGEON GATE</div>
       <div class="pbody">${inner}</div></div>
     <div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>WEEKLY SCHEDULE</div>
-      <div class="pbody">${DAYS.map((d,i)=>`<div class="goalrow" onclick="startQuestAt(${i})" style="cursor:pointer">
-        <span class="gname" style="${i===gi?'color:#fff;text-shadow:0 0 8px var(--p)':''}">${i===gi?"▶ ":""}${DAYLBL[i]} — ${d.name}</span>
-        <span class="gval">${d.cardio?"CARDIO":"LIFT"} ▸</span></div>`).join("")}
-        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Tap any gate to raid it off-schedule.</div></div></div>`;
+      <div class="pbody">${DAYS.map((d,i)=>`<div class="goalrow">
+        <span class="gname" style="${i===gi?'color:#fff;text-shadow:0 0 8px var(--p)':''}">${i===gi?"▶ ":""}${DAYLBL[i]} — ${d.name}${d.cardio?"":" ("+(S.gateVar[i]?"B":"A")+" next)"}</span>
+        <span class="gval">${d.cardio?"CARDIO":"LIFT"}</span></div>`).join("")}
+        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Gates open only on their scheduled day. One raid per day.</div></div></div>` + bkHtml;
 }
 function abandonQuest(){
   modal(`<h2>⚠ WARNING</h2><div>Abandon the current quest?<br><span class="muted">Logged sets will be lost.</span></div>
@@ -539,40 +745,50 @@ function abandonQuest(){
     <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
 }
 
+/* ---------- workout ---------- */
 function startQuestAt(i){
   if(S.session){ go("workout"); return; }
+  if(i!==gateForToday()){
+    modal(`<h2>⚠ SYSTEM</h2><div>This gate is sealed.<br><span class="muted">Gates open only on their scheduled day.</span></div><button class="btn" onclick="closeModal()">OK</button>`);
+    return;
+  }
+  if(S.lastDone===todayStr()){
+    modal(`<h2>⚠ SYSTEM</h2><div>A gate was already cleared today.<br><span class="muted">One dungeon per day. It reopens tomorrow.</span></div><button class="btn" onclick="closeModal()">OK</button>`);
+    return;
+  }
   const day=DAYS[i];
   if(day.cardio){
     S.session={day:i, cardio:true, level:Math.min(S.cardioLvl,CARDIO.length)};
   } else {
+    const v=S.gateVar[i]?1:0;
     const entries={};
-    for(const e of day.ex){
+    for(const e of exList(i,v)){
       const st=exSt(e.id);
       entries[e.id]={cal:!st.calibrated,
         sets:Array.from({length:e.sets},()=>({w:st.calibrated?st.weight:0,r:st.calibrated?e.hi:0,done:false}))};
     }
-    S.session={day:i, entries};
+    S.session={day:i, v, entries};
   }
   save(); go("workout");
 }
-
 function vWorkout(){
   if(!S.session){ go("quest"); return; }
   const day=DAYS[S.session.day];
   if(S.session.cardio){ vCardioSession(); return; }
-  const cards=day.ex.map(e=>{
+  const v=S.session.v?1:0;
+  const cards=exList(S.session.day,v).map(e=>{
     const ent=S.session.entries[e.id];
     const rows=ent.sets.map((s,i)=> ent.cal ? `
       <div class="setrow ${s.done?'done':''}" >
         <span class="setnum">${i+1}</span>
-        <input class="cin" type="number" inputmode="decimal" placeholder="lb" id="cw-${e.id}-${i}" value="${s.w||''}">
+        <input class="cin" type="number" inputmode="decimal" placeholder="${e.assist?"±lb":"lb"}" id="cw-${e.id}-${i}" value="${s.w||''}">
         <span class="xmark">lb ×</span>
         <input class="cin" type="number" inputmode="numeric" placeholder="reps" id="cr-${e.id}-${i}" value="${s.r||''}">
         <button class="logbtn" onclick="logCal('${e.id}',${i})">${s.done?"✓ SET":"LOG"}</button>
       </div>` : `
       <div class="setrow ${s.done?'done':''}">
         <span class="setnum">${i+1}</span>
-        <span class="wtag" onclick="editW('${e.id}',${i})">${s.w}<small> lb ✎</small></span>
+        <span class="wtag" onclick="editW('${e.id}',${i})">${fw(s.w)}<small> ✎</small></span>
         <div class="repctl">
           <button onclick="adjR('${e.id}',${i},-1)">−</button>
           <span class="rv">${s.r}</span>
@@ -583,59 +799,69 @@ function vWorkout(){
     return `<div class="excard">
       <div class="exhead"><span class="exname">${e.name}</span>
         <span class="extag">${e.sets}×${e.lo}–${e.hi}${e.note?" · "+e.note:""}</span></div>
-      ${ent.cal?`<span class="caltag">⚠ CALIBRATION — find a weight you can lift ${e.lo}–${e.hi} times, log every set</span>`:""}
+      ${ent.cal?`<span class="caltag">⚠ CALIBRATION — ${e.assist?"log assist as negative (e.g. -40) or added weight":"find a weight you can lift "+e.lo+"–"+e.hi+" times"}, log every set</span>`:""}
       ${rows}
     </div>`;
   }).join("");
   document.getElementById("view").innerHTML=`
-    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${day.name}</div>
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${day.name} — ${v?"B":"A"}</div>
       <div class="pbody">${cards}
         <button class="btn" onclick="finishQuest()">CLEAR DUNGEON</button>
         <button class="btn ghost" onclick="go('quest')">◂ BACK (progress saved)</button>
       </div></div>`;
 }
 function logCal(id,i){
+  const e=exDef(id);
   const w=parseFloat(document.getElementById(`cw-${id}-${i}`).value);
   const r=parseInt(document.getElementById(`cr-${id}-${i}`).value);
-  if(!(w>0)||!(r>0)){ modal(`<h2>⚠ SYSTEM</h2><div>Enter the weight and reps you performed, then press LOG.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
+  const wOk = e&&e.assist ? isFinite(w) : (w>0);
+  if(!wOk||!(r>0)){ modal(`<h2>⚠ SYSTEM</h2><div>Enter the weight and reps you performed, then press LOG.${e&&e.assist?"<br><span class='muted'>Assisted: enter assist as a negative number.</span>":""}</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
   const s=S.session.entries[id].sets[i]; s.w=w; s.r=r; s.done=true; save(); vWorkout();
 }
 function togSet(id,i){ const s=S.session.entries[id].sets[i]; s.done=!s.done; save(); vWorkout(); }
 function adjR(id,i,d){ const s=S.session.entries[id].sets[i]; s.r=Math.max(0,Math.min(50,s.r+d)); s.done=true; save(); vWorkout(); }
 function editW(id,i){
   const s=S.session.entries[id].sets[i];
-  const v=prompt("Weight for this set (lb):", s.w);
+  const v=prompt("Weight for this set (lb, negative = assist):", s.w);
   if(v===null) return; const w=parseFloat(v);
-  if(w>=0){ s.w=w; save(); vWorkout(); }
+  if(isFinite(w)){ s.w=w; save(); vWorkout(); }
 }
 
 function finishQuest(){
   const day=DAYS[S.session.day];
+  const v=S.session.v?1:0;
   let setsDone=0, setsTotal=0, ton=0, det=[], progNotes=[];
-  for(const e of day.ex){
+  for(const e of exList(S.session.day,v)){
     const ent=S.session.entries[e.id], st=exSt(e.id);
     const done=ent.sets.filter(s=>s.done);
     setsTotal+=e.sets; setsDone+=done.length;
     if(!done.length){ det.push(`${e.name}: skipped`); continue; }
-    ton += done.reduce((a,s)=>a+s.w*s.r,0);
+    ton += done.reduce((a,s)=>a+Math.max(0,s.w)*s.r,0);
     det.push(`${e.name}: `+done.map(s=>`${s.w}×${s.r}`).join(", "));
     const bestSet=done.reduce((a,s)=>e1rm(s.w,s.r)>e1rm(a.w,a.r)?s:a);
     const best1=e1rm(bestSet.w,bestSet.r);
-    if(best1>st.best) st.best=Math.round(best1);
+    if(bestSet.w>0 && best1>st.best) st.best=Math.round(best1);
     if(ent.cal){
-      st.weight=round5(best1*0.95/(1+e.hi/30));
+      if(e.assist){
+        st.weight=round5a(Math.max(...done.map(s=>s.w)));
+      } else {
+        st.weight=round5(best1*0.95/(1+e.hi/30));
+        st.base=Math.round(best1);
+      }
       st.calibrated=true; st.fails=0;
-      progNotes.push(`${e.name}: calibrated → <b class="good">${st.weight} lb</b>`);
+      progNotes.push(`${e.name}: calibrated → <b class="good">${fw(st.weight)}</b>`);
     } else {
       const minReps=Math.min(...done.map(s=>s.r));
       if(done.length===e.sets && minReps>=e.hi){
         st.weight+=e.inc; st.fails=0;
-        progNotes.push(`${e.name}: <b class="good">+${e.inc} lb → ${st.weight} lb</b>`);
+        progNotes.push(`${e.name}: <b class="good">+${e.inc} lb → ${fw(st.weight)}</b>`);
       } else if(minReps<e.lo){
         st.fails=(st.fails||0)+1;
-        if(st.fails>=2){ st.weight=round5(st.weight*0.9); st.fails=0;
-          progNotes.push(`${e.name}: deload → ${st.weight} lb`);
-        } else progNotes.push(`${e.name}: hold at ${st.weight} lb`);
+        if(st.fails>=2){
+          st.weight = e.assist ? round5a(st.weight-10) : round5(st.weight*0.9);
+          st.fails=0;
+          progNotes.push(`${e.name}: deload → ${fw(st.weight)}`);
+        } else progNotes.push(`${e.name}: hold at ${fw(st.weight)}`);
       } else progNotes.push(`${e.name}: hold — push for ${e.hi} reps`);
     }
   }
@@ -643,12 +869,14 @@ function finishQuest(){
   const allDone = setsDone===setsTotal;
   const xp = 50 + setsDone*10 + (allDone?50:0);
   S.tonnage+=ton; S.quests++;
-  completeCommon(day.name, xp, det.join("\n"),
+  S.gateVar[S.session.day] = S.gateVar[S.session.day]?0:1;
+  completeCommon(`${day.name} — ${v?"B":"A"}`, xp, det.join("\n"),
     `<div class="muted" style="text-align:left;font-size:12px;line-height:1.9">${progNotes.join("<br>")}</div>
      <div style="margin-top:10px">Volume moved: <b class="gold">${Math.round(ton).toLocaleString()} lb</b></div>`);
 }
 
 function vCardioSession(){
+  if(TMR){ vTimer(); return; }
   const lvl=S.session.level, c=CARDIO[lvl-1];
   const tot=Math.round((c.run+c.walk)*c.rounds)+10;
   const ivs = c.walk
@@ -663,19 +891,25 @@ function vCardioSession(){
       <div class="pbody">
         <div class="cbig">≈ ${tot} MIN</div>
         ${ivs}
-        <button class="btn" onclick="finishCardio(true)">CLEARED — IT WAS MANAGEABLE</button>
+        ${S.session.timerDone?`<div class="clearbanner">✓ GUIDED SESSION FINISHED — REPORT RESULT</div>`:`
+        <button class="btn" onclick="startCardioTimer()">▶ START GUIDED TIMER (BEEPS)</button>
+        <div class="muted" style="font-size:10px;text-align:center;margin-top:8px">Keep the screen on while it runs. Or do it manually and report below.</div>`}
+        <button class="btn ${S.session.timerDone?"":"ghost"}" onclick="finishCardio(true)">CLEARED — IT WAS MANAGEABLE</button>
         <button class="btn ghost" onclick="finishCardio(false)">CLEARED — BARELY SURVIVED</button>
         <button class="btn ghost" onclick="go('quest')">◂ BACK</button>
       </div></div>`;
 }
 function finishCardio(advance){
-  const lvl=S.session.level;
+  const lvl=S.session.level, c=CARDIO[lvl-1];
   let note;
   if(advance && S.cardioLvl<CARDIO.length){ S.cardioLvl++; note=`Endurance level up → <b class="good">LEVEL ${S.cardioLvl}</b>`; }
   else if(advance){ note=`<b class="good">Max program level.</b> Keep running 30+ min — go further or faster.`; }
   else note=`Level held at ${lvl}. Clear it again to advance.`;
   S.cardioDone++;
-  completeCommon("ENDURANCE TRAINING", advance?150:120, `Run/walk level ${lvl} completed`, `<div class="muted">${note}</div>`);
+  const ranMin=Math.round(c.run*c.rounds);
+  creditRun(ranMin);
+  completeCommon("ENDURANCE TRAINING", advance?150:120, `Run/walk level ${lvl} completed`,
+    `<div class="muted">${note}<br>${ranMin} run minutes credited to today's daily quest.</div>`);
 }
 
 function completeCommon(name, xp, detail, extraHtml){
@@ -684,20 +918,25 @@ function completeCommon(name, xp, detail, extraHtml){
   S.log.unshift({d:t, name, xp, det:detail});
   if(S.log.length>200) S.log.length=200;
   S.session=null;
-  const lvBefore=S.level;
-  gainXp(xp,true); save();
+  gainXp(xp); save();
   modal(`<h2>⚠ DUNGEON CLEAR</h2>
     <div class="big">+${xp} XP</div>
     ${extraHtml||""}
-    ${S.level>lvBefore?`<div style="margin-top:10px">LEVEL UP → <b class="gold">LV ${S.level} · RANK ${rankOf(S.level)}</b></div>`:""}
-    <button class="btn" onclick="closeModal();go('quest')">ARISE</button>`);
+    <button class="btn" onclick="finishClear()">COMPLETE</button>`);
   renderHeader();
 }
-
+/* ---------- stats ---------- */
+function growthPct(){
+  let sum=0,n=0;
+  for(const id in S.ex){ const v=S.ex[id]; if(v.base>0&&v.best>0){ sum+=v.best/v.base-1; n++; } }
+  return n? sum/n : 0;
+}
 function vStats(){
   const weighIns=S.weights.length;
+  const g=growthPct();
   const attrs=[
     ["STR — total volume",       Math.min(100, Math.floor(S.tonnage/3000)+10)],
+    ["GROWTH — vs day one",      Math.min(100, Math.round(g*250)+10)],
     ["VIT — dungeons cleared",   Math.min(100, S.quests*2+10)],
     ["AGI — endurance",          Math.min(100, S.cardioDone*4+S.cardioLvl*2+8)],
     ["DISCIPLINE — daily quests",Math.min(100, S.daily.count*2+10)],
@@ -705,7 +944,7 @@ function vStats(){
     ["WILL — best streak",       Math.min(100, S.bestStreak*4+10)],
   ];
   const prs = Object.entries(S.ex).filter(([,v])=>v.calibrated)
-    .map(([id,v])=>{const d=exDef(id); return d?`<div class="goalrow"><span class="gname">${d.name}</span><span class="gval">${v.weight} lb <small style="color:var(--dim)">(e1RM ${v.best})</small></span></div>`:"";}).join("");
+    .map(([id,v])=>{const d=exDef(id); return d?`<div class="goalrow"><span class="gname">${d.name}</span><span class="gval">${fw(v.weight)} ${v.best?`<small style="color:var(--dim)">(e1RM ${v.best})</small>`:""}</span></div>`:"";}).join("");
   document.getElementById("view").innerHTML=`
     <div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>STATUS WINDOW</div>
       <div class="pbody">
@@ -713,20 +952,22 @@ function vStats(){
         <div class="statgrid">
           <div class="stat"><small>LEVEL</small><b>${S.level}</b></div>
           <div class="stat"><small>TOTAL XP</small><b>${S.totalXp.toLocaleString()}</b></div>
+          <div class="stat"><small>GROWTH</small><b style="color:${g>0?'var(--good)':'#fff'}">${g>0?"+":""}${(g*100).toFixed(1)}%</b></div>
           <div class="stat"><small>DUNGEONS CLEARED</small><b>${S.quests+S.cardioDone}</b></div>
           <div class="stat"><small>DAILY QUESTS</small><b>${S.daily.count}</b></div>
           <div class="stat"><small>VOLUME LIFTED</small><b>${Math.round(S.tonnage/1000)}k lb</b></div>
           <div class="stat"><small>STREAK / BEST</small><b>${S.streak} / ${S.bestStreak}</b></div>
           <div class="stat"><small>ENDURANCE LV</small><b>${S.cardioLvl}</b></div>
-          <div class="stat"><small>BEST RUN</small><b>${S.daily.bestKm?S.daily.bestKm+" km":"—"}</b></div>
         </div>
         ${attrs.map(([n,v])=>`<div class="attr"><div class="attrhead"><span>${n}</span><b>${v}</b></div>
           <div class="abar"><div class="afill" style="width:${v}%"></div></div></div>`).join("")}
+        <div class="muted" style="font-size:10px;margin-top:8px">NEXT RANK: ${(()=>{const cur=rankOf(S.level);for(const[n,m]of RANKS){if(m>S.level)return n+" at level "+m;}return "MAX — SSS ACHIEVED";})()}</div>
       </div></div>
     <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>CURRENT WORKING WEIGHTS</div>
       <div class="pbody">${prs||`<div class="muted">No lifts calibrated yet. Clear your first quests — the System is watching.</div>`}</div></div>`;
 }
 
+/* ---------- weight ---------- */
 function vWeight(){
   const ws=S.weights;
   let chart="", list="", summary="";
@@ -780,7 +1021,7 @@ function addWeight(){
       S.lastWeighXp=t;
       const prev=S.weights.length>1?S.weights[S.weights.length-2].lbs:null;
       const bonus=(prev!==null && v<prev)?15:0;
-      gainXp(10+bonus,true);
+      gainXp(10+bonus);
       if(bonus) modal(`<h2>⚠ NOTIFICATION</h2><div>Weigh-in logged.<br><b class="good">Weight down — +${10+bonus} XP</b></div><button class="btn" onclick="closeModal()">OK</button>`);
     }
   }
@@ -804,6 +1045,7 @@ function drawChart(ws){
     ${dots}</svg>`;
 }
 
+/* ---------- log ---------- */
 function vLog(){
   const ents=S.log.slice(0,40).map(l=>`<div class="logent">
     <div class="lh"><b>${l.name}</b><span>${l.d} · +${l.xp} XP</span></div>
@@ -813,32 +1055,48 @@ function vLog(){
       <div class="pbody">${ents||`<div class="muted">No quests cleared yet.</div>`}</div></div>`;
 }
 
+/* ---------- system ---------- */
 function vSys(){
   document.getElementById("view").innerHTML=`
-    <div class="panel"><div class="ptitle"><div class="diamond"><span>⚙</span></div>SYSTEM</div>
+    <div class="panel"><div class="ptitle"><div class="diamond"><span class="gear">⚙</span></div>SYSTEM</div>
       <div class="pbody">
+        <div class="sect">PLAYER</div>
+        <div class="goalrow"><span class="gname">Name</span><span class="gval">${S.name||"—"}</span></div>
+        <div class="goalrow"><span class="gname">Profile</span><span class="gval">${prof().lbl}</span></div>
+        <button class="btn ghost" onclick="askName(false)">CHANGE NAME / PROFILE</button>
         <div class="sect">BACKUP</div>
-        <div class="muted" style="font-size:11px;line-height:1.6">All data lives in this browser only. Export a backup occasionally — clearing browser data erases progress.</div>
-        <button class="btn ghost" onclick="exportData()">EXPORT DATA (download file)</button>
+        <div class="muted" style="font-size:11px;line-height:1.6">All data lives in this browser only. Export a backup occasionally.${S.lastBackup?` Last backup: ${S.lastBackup}.`:""}</div>
+        <button class="btn ghost" onclick="exportData();vSys()">EXPORT DATA (download file)</button>
         <div class="sect">RESTORE</div>
-        <textarea class="io" id="imp" placeholder="Paste an exported backup here…"></textarea>
-        <button class="btn ghost" onclick="importData()">IMPORT DATA</button>
+        <input type="file" id="impFile" accept=".json,application/json,text/plain" style="display:none" onchange="importFile(this)">
+        <button class="btn ghost" onclick="document.getElementById('impFile').click()">IMPORT FROM FILE</button>
+        <textarea class="io" id="imp" placeholder="…or paste an exported backup here"></textarea>
+        <button class="btn ghost" onclick="importData()">IMPORT PASTED TEXT</button>
         <div class="sect">DANGER ZONE</div>
         <button class="btn danger" onclick="resetAll()">RESET ALL DATA</button>
       </div></div>`;
 }
 function exportData(){
+  S.lastBackup=todayStr(); save();
   const blob=new Blob([JSON.stringify(S)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download=`system-backup-${todayStr()}.json`;
   a.click();
 }
+function importFile(inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ const ta=document.getElementById("imp"); if(ta) ta.value=r.result; importData(); };
+  r.readAsText(f);
+}
 function importData(){
   try{
     const d=JSON.parse(document.getElementById("imp").value);
     if(typeof d.level!=="number") throw 0;
-    S=Object.assign(defaultState(),d); save();
+    S=Object.assign(defaultState(),d);
+    if(!Array.isArray(S.gateVar)) S.gateVar=[0,0,0,0,0];
+    save();
     modal(`<h2>⚠ SYSTEM</h2><div class="good">Data restored.</div><button class="btn" onclick="closeModal();go('quest')">OK</button>`);
     renderHeader();
   }catch(e){
@@ -851,9 +1109,11 @@ function resetAll(){
     <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
 }
 
+/* ---------- boot ---------- */
 const VIEWS={quest:vQuest, workout:vWorkout, stats:vStats, weight:vWeight, log:vLog, sys:vSys};
 renderHeader(); renderNav();
 if(S.session) go("workout"); else go("quest");
+if(!S.name) askName(true);
 if("serviceWorker" in navigator && location.protocol.indexOf("http")===0){
   navigator.serviceWorker.register("./sw.js").catch(function(){});
 }
