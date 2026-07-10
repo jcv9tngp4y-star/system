@@ -332,11 +332,11 @@ const RANKS = [["E",0],["D",10],["C",25],["B",45],["A",60],["S",75],["SS",88],["
 
 /* ---------- difficulty profiles ---------- */
 const PROFILES={
- hunter:  {lbl:"HUNTER",   push:"Push-ups",       sit:"Sit-ups",       run:"Run",
+ hunter:  {lbl:"HUNTER",   push:"Push-ups",       sit:"Sit-ups",       run:"Run",  squat:"Squats",
            base:[50,15], cap:[100,30], repStep:5, repPer:3, minPer:2, penExtra:10, dist:true},
- awakened:{lbl:"AWAKENED", push:"Push-ups (knees ok)", sit:"Crunches", run:"Jog / brisk walk",
+ awakened:{lbl:"AWAKENED", push:"Push-ups (knees ok)", sit:"Crunches", run:"Jog / brisk walk", squat:null,
            base:[20,10], cap:[50,25],  repStep:3, repPer:3, minPer:2, penExtra:8,  dist:false},
- trainee: {lbl:"TRAINEE",  push:"Wall push-ups",  sit:"Sit-to-stands", run:"Walk",
+ trainee: {lbl:"TRAINEE",  push:"Wall push-ups",  sit:"Sit-to-stands", run:"Walk", squat:null,
            base:[8,10],  cap:[25,25],  repStep:2, repPer:3, minPer:2, penExtra:5,  dist:false},
 };
 function prof(){ return PROFILES[S.profile]||PROFILES.hunter; }
@@ -357,7 +357,8 @@ let S;
 try { S = JSON.parse(lsGet(KEY)) || defaultState(); }
 catch(e){ S = defaultState(); }
 if(!S.daily) S.daily = defaultDaily();
-if(!Array.isArray(S.daily.parts) || typeof S.daily.parts[0]!=="number") S.daily.parts=[0,0,0];
+if(!Array.isArray(S.daily.parts) || typeof S.daily.parts[0]!=="number") S.daily.parts=[0,0,0,0];
+while(S.daily.parts.length<4) S.daily.parts.push(0);
 if(S.name===undefined) S.name=null;
 if(!S.profile) S.profile="hunter";
 if(!Array.isArray(S.gateVar)) S.gateVar=[0,0,0,0,0];
@@ -416,19 +417,20 @@ function renderNav(){
 function go(v){ curView=v; renderNav(); VIEWS[v](); window.scrollTo(0,0); }
 
 /* ---------- name / profile ---------- */
+let nmTmp=null;
 function askName(first){
   modal(`<h2>⚠ SYSTEM</h2><div class="muted">State your name, Hunter.</div>
-    <input class="cin" style="width:80%;margin:12px 0" id="nmIn" maxlength="14" placeholder="NAME" value="${first?"":(S.name||"")}">
+    <input class="cin" style="width:80%;margin:12px 0" id="nmIn" maxlength="14" placeholder="NAME" value="${nmTmp!==null?nmTmp:(first?"":(S.name||""))}">
     <div class="muted" style="font-size:11px;margin:4px 0 8px">TRAINING PROFILE</div>
     ${Object.entries(PROFILES).map(([k,p])=>`
       <button class="btn ${S.profile===k?"":"ghost"}" style="margin-top:6px;font-size:11px" onclick="pickProf('${k}')">${p.lbl} — ${p.base[0]}/${p.base[0]} reps · ${p.base[1]} min ${p.run.toLowerCase()}</button>`).join("")}
     <button class="btn" style="margin-top:14px" onclick="saveName()">REGISTER</button>`);
 }
-function pickProf(k){ S.profile=k; save(); askName(false); }
+function pickProf(k){ const el=document.getElementById("nmIn"); nmTmp=el?el.value:nmTmp; S.profile=k; save(); askName(false); }
 function saveName(){
   const el=document.getElementById("nmIn");
   const v=(el&&el.value||"").trim().toUpperCase();
-  S.name=v||S.name||"HUNTER"; save(); closeModal(); renderHeader(); go("quest");
+  S.name=v||S.name||"HUNTER"; nmTmp=null; save(); closeModal(); renderHeader(); go("quest");
 }
 
 /* ---------- daily quest ---------- */
@@ -437,7 +439,9 @@ function dailyTargets(){
   return { reps:Math.min(p.cap[0], p.base[0]+Math.floor(c/p.repPer)*p.repStep),
            run: Math.min(p.cap[1], p.base[1]+Math.floor(c/p.minPer)) };
 }
-function dailyGoals(){ const dt=dailyTargets(); return [dt.reps, dt.reps, dt.run]; }
+function dailyGoals(){ const dt=dailyTargets(); const p=prof();
+  return p.squat ? [dt.reps, dt.reps, dt.reps, dt.run] : [dt.reps, dt.reps, dt.run]; }
+function runIdx(){ return prof().squat ? 3 : 2; }
 function checkPenalty(){
   const t=todayStr();
   const y=new Date(); y.setDate(y.getDate()-1);
@@ -457,7 +461,7 @@ function checkPenalty(){
 function creditRun(m){
   if(S.daily.lastComplete===todayStr()) return;
   const g=dailyGoals();
-  S.daily.parts[2]=Math.min(g[2], S.daily.parts[2]+m); save();
+  S.daily.parts[runIdx()]=Math.min(g[runIdx()], S.daily.parts[runIdx()]+m); save();
 }
 function addDaily(i,n){
   if(S.daily.lastComplete===todayStr()) return;
@@ -487,7 +491,7 @@ function completeDaily(){
   }
   const xp=50+Math.min(S.streak,25);
   S.log.unshift({d:t, name:"DAILY QUEST", xp,
-    det:`${p.push} ${dt.reps} · ${p.sit} ${dt.reps} · ${p.run} ${dt.run>=p.cap[1]&&p.dist?"30+ min":dt.run+" min"}`});
+    det:`${p.push} ${dt.reps} · ${p.sit} ${dt.reps}${p.squat?` · ${p.squat} ${dt.reps}`:""} · ${p.run} ${dt.run>=p.cap[1]&&p.dist?"30+ min":dt.run+" min"}`});
   gainXp(xp); save();
   modal(`<h2>⚠ DAILY QUEST CLEAR</h2>
     <div class="big">+${xp} XP</div>
@@ -607,7 +611,7 @@ function startCardioTimer(){
 }
 function startDailyRun(){
   const g=dailyGoals();
-  const rem=Math.max(1,g[2]-S.daily.parts[2]);
+  const rem=Math.max(1,g[runIdx()]-S.daily.parts[runIdx()]);
   startTimer([{l:prof().run.toUpperCase(),s:rem*60,p:"run"}],"daily");
 }
 
@@ -615,7 +619,7 @@ function startDailyRun(){
 function vQuest(){
   checkPenalty();
   const t=todayStr(), p=prof();
-  if(S.daily.todayD!==t){ S.daily.todayD=t; S.daily.parts=[0,0,0]; save(); }
+  if(S.daily.todayD!==t){ S.daily.todayD=t; S.daily.parts=[0,0,0,0]; save(); }
   const goals=dailyGoals();
   if(S.daily.lastComplete!==t && S.daily.parts.some(v=>v>0) && S.daily.parts.every((v,j)=>v>=goals[j])){ completeDaily(); }
   const dt=dailyTargets();
@@ -651,7 +655,9 @@ function vQuest(){
         <button class="btn danger" onclick="clearPenalty()">PENALTY COMPLETE</button>
       </div></div>` : "";
 
-  const items=[[p.push,"reps"],[p.sit,"reps"],[maxRun?p.run+" — push distance":p.run,"min"]];
+  const items=[[p.push,"reps"],[p.sit,"reps"]];
+  if(p.squat) items.push([p.squat,"reps"]);
+  items.push([maxRun?p.run+" — push distance":p.run,"min"]);
   let dailyBody;
   if(dailyDone){
     dailyBody=`<div class="clearbanner">✓ DAILY QUEST CLEARED</div>
@@ -675,7 +681,7 @@ function vQuest(){
           <button onclick="addDaily(${i},5)">+5</button>
         </div>
       </div>`;}).join("")
-      + (S.daily.parts[2]<goals[2] ? `<button class="btn ghost" style="font-size:11px" onclick="startDailyRun()">⏱ GUIDED ${p.run.toUpperCase()} — ${goals[2]-S.daily.parts[2]} MIN, BEEPS AT THE END</button>`:"")
+      + (S.daily.parts[runIdx()]<goals[runIdx()] ? `<button class="btn ghost" style="font-size:11px" onclick="startDailyRun()">⏱ GUIDED ${p.run.toUpperCase()} — ${goals[runIdx()]-S.daily.parts[runIdx()]} MIN, BEEPS AT THE END</button>`:"")
       + (maxRun?`<div class="wrow" style="margin-top:8px">
           <span class="muted" style="font-size:11px">Distance (km, optional)</span>
           <input class="cin" type="number" inputmode="decimal" step="0.1" id="dkm" placeholder="${S.daily.bestKm||'km'}">
