@@ -438,7 +438,11 @@ const WEEKS={
  trainee: [L("hBack"),L("hLegs"),L("hSho"),{t:"cardio"},L("hChest"),Sg("gfull",true),Sg("gfull",true)],
  owen:    [L("hBack"),{t:"ph",name:"SPECIALIZED LEG TRAINING",desc:"Owen's custom leg workout — details pending. Do it your way, then mark it cleared."},L("hSho"),{t:"cardio"},L("hChest"),Sg("satHip",true),Sg("sunUp",true)],
  joy:     [L("joyA"),Sg("joyUpS"),L("joyU"),Sg("joyLowS"),L("joyB"),Sg("joyFull"),{t:"runsimple",name:"RUN — WITH ADAM",desc:"Pace and distance set by Adam's ladder. Clear it when the run is done."}],
- jocelyne:[L("momUp"),Sg("momFris"),Sg("momFull",true),Sg("momFris"),L("momLow"),{t:"pool"},{t:"pool"}],
+ jocelyne:[L("momUp"),
+  {t:"ph",name:"ULTIMATE FRISBEE",desc:"Game day. Play hard, then clear the gate.",bon:"fris"},
+  Sg("momFull",true),
+  {t:"ph",name:"ULTIMATE FRISBEE",desc:"Game day. Play hard, then clear the gate.",bon:"fris"},
+  L("momLow"),{t:"pool"},{t:"pool"}],
  eileen:  [L("eiFull"),Sg("gfull"),L("eiFull"),Sg("gfull"),L("eiFull"),Sg("gfull"),Sg("gfull")],
  allison: [L("alFull"),Sg("gfull"),L("alFull"),Sg("gfull"),L("alFull"),Sg("gfull"),Sg("gfull")],
 };
@@ -453,6 +457,7 @@ const BONK={
  hChest: SL(["rpec","rtri","rlat","rpray"]),
  cardio: SL(["relph","rankle","rsquat","rfold"]),
  ph:     SL(["squad","shamf","sfig4","tcalf"]),
+ fris:   SL(["squad","shamf","shipf","tcalf"]),
  runsimple: SL(["squad","shamf","tcalf","sfig4"]),
  joyA:   SL(["rpigeon","rcouch","r9090","rfold"]),
  joyU:   SL(["rlat","rpec","rxbody","rwrist"]),
@@ -494,7 +499,7 @@ const PROFILES={
  jocelyne:{lbl:"JOCELYNE",        desc:"Mon upper · Fri lower · frisbee Tue/Thu",
            reps:["Push-ups","Air squats"], repBase:20, repCap:50, repStep:1, repPer:3,
            timed:[{n:"Plank",base:5,cap:10,per:18,kind:"plank"}],
-           pen:{label:"Run",mode:"fix",min:20}, workXP:390, deload:true},
+           pen:{label:"Run",mode:"fix",min:20}, workXP:240, deload:true},
  eileen:  {lbl:"EILEEN",          desc:"M/W/F full body · home gym",
            reps:["Wall push-ups","Sit-to-stands"], repBase:8, repCap:25, repStep:2, repPer:3,
            timed:[{n:"Walk",base:10,cap:25,per:2,kind:"run"}],
@@ -1133,6 +1138,7 @@ function schedulePanel(){
         <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Gates open only on their day. One raid per day.</div></div></div>`;
 }
 function bonusKeyFor(pl){
+  if(pl.bon) return pl.bon;
   if(pl.t==="lift") return pl.key;
   if(pl.t==="cardio") return "cardio";
   if(pl.t==="runsimple") return "runsimple";
