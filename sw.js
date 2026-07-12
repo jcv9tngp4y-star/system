@@ -1,5 +1,5 @@
-/* THE SYSTEM - offline cache (network-first for the app page) */
-const CACHE = "system-v3";
+/* THE SYSTEM - offline cache v4 (app files only; API calls pass through untouched) */
+const CACHE = "system-v4";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-180.png", "./icon-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -10,11 +10,11 @@ self.addEventListener("activate", e => {
   ).then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", e => {
-  const isPage = e.request.mode === "navigate" ||
-                 e.request.url.endsWith("/index.html") ||
-                 e.request.url.endsWith("/");
+  const url = new URL(e.request.url);
+  /* never touch non-GET requests or anything outside our own site (e.g. the guild database) */
+  if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
+  const isPage = e.request.mode === "navigate" || url.pathname.endsWith("/index.html") || url.pathname.endsWith("/");
   if (isPage) {
-    /* page: try network for freshness, fall back to cache offline */
     e.respondWith(
       fetch(e.request).then(r => {
         const copy = r.clone();
@@ -23,7 +23,6 @@ self.addEventListener("fetch", e => {
       }).catch(() => caches.match(e.request).then(h => h || caches.match("./index.html")))
     );
   } else {
-    /* assets: cache-first */
     e.respondWith(
       caches.match(e.request).then(hit => hit ||
         fetch(e.request).then(r => {
