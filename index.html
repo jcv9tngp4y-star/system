@@ -1299,10 +1299,10 @@ function vStats(){
           <div class="abar"><div class="afill" style="width:${v}%"></div></div></div>`).join("")}
         <div class="muted" style="font-size:10px;margin-top:8px">NEXT RANK: ${(()=>{const cur=rankOf(S.level);for(const[n,m]of RANKS){if(m>S.level)return n+" at level "+m;}return "MAX — SSS ACHIEVED";})()}</div>
       </div></div>
-    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>CURRENT WORKING WEIGHTS</div>
-      <div class="pbody">${prs||`<div class="muted">No lifts calibrated yet. Clear your first quests — the System is watching.</div>`}</div></div>
     <div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>THE GUILD</div>
-      <div class="pbody" id="lbPanel"><div class="muted">CONNECTING…</div></div></div>`;
+      <div class="pbody" id="lbPanel"><div class="muted">CONNECTING…</div></div></div>
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>CURRENT WORKING WEIGHTS</div>
+      <div class="pbody">${prs||`<div class="muted">No lifts calibrated yet. Clear your first quests — the System is watching.</div>`}</div></div>`;
   fetchLB(function(rows,live){
     const el=document.getElementById("lbPanel");
     if(el) el.innerHTML=lbRows(rows,live);
