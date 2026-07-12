@@ -261,77 +261,66 @@ const KEY = "theSystem_v1";
 const todayStr = () => new Date().toLocaleDateString("en-CA");
 function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
 
-/* ---------- stretch pool (structure per Movement by David: active mobility + holds, 2 sets) ---------- */
+/* =====================================================
+   PROGRAM DATA — one block per person. To edit someone's
+   program, edit their entries here; the engine reads it.
+   ===================================================== */
+
+/* ---------- stretch pool ---------- */
 const STRETCH={
  relph:  {id:"relph",  name:"Elephant Walks",          mode:"reps", sets:2, reps:8,  cap:16, alt:true, tip:"Hands to floor, alternate straightening each knee."},
- rsplit: {id:"rsplit", name:"Deep Split Squat",        mode:"reps", sets:2, reps:6,  cap:12, per:"per side", tip:"Long lunge, back knee hovers, sink deep each rep."},
- rpan:   {id:"rpan",   name:"Pancake Stretch",         holds:2, sec:30, cap:60, tip:"Legs wide, fold forward with a flat back."},
- rpigeon:{id:"rpigeon",name:"Pigeon Pose",             holds:2, sec:25, cap:45, per:"per side", tip:"Front shin angled, hips square, fold forward."},
- r9090:  {id:"r9090",  name:"90/90 Hip Hold",   holds:2, sec:30, cap:60, per:"per side", tip:"Sit tall, chest toward front shin."},
- rsquat: {id:"rsquat", name:"Deep Squat Hold",         holds:2, sec:30, cap:60, tip:"Heels down, knees pushed out with elbows."},
- rcouch: {id:"rcouch", name:"Couch Stretch",           holds:2, sec:25, cap:45, per:"per side", tip:"Rear foot on wall, squeeze glute, ribs down."},
- rfold:  {id:"rfold",  name:"Standing Forward Fold",   holds:2, sec:20, cap:40, tip:"Soft knees, let the spine hang."},
- rwrist: {id:"rwrist", name:"Wrist Flexor Stretch",    holds:2, sec:20, cap:35, per:"per side", tip:"Arm straight, pull fingers back gently."},
- rpray:  {id:"rpray",  name:"Forearm Prayer Stretch",  holds:2, sec:20, cap:35, tip:"Palms together, lower hands until forearms bite."},
- rpec:   {id:"rpec",   name:"Doorway Pec Stretch",     holds:2, sec:25, cap:45, per:"per side", tip:"Elbow at 90°, step through the door."},
- rlat:   {id:"rlat",   name:"Overhead Lat Reach",      holds:2, sec:25, cap:45, per:"per side", tip:"Grab a frame overhead, sink hips away."},
- rthor:  {id:"rthor",  name:"Thoracic Rotations (open-book)", mode:"reps", sets:2, reps:8, cap:12, per:"per side", tip:"On all fours, hand behind head — rotate open, return, repeat."},
- rankle: {id:"rankle", name:"Ankle Rocks (knee to wall)", mode:"reps", sets:2, reps:10, cap:15, per:"per side", tip:"Rock the knee over the toes and back, heel down."},
- rxbody: {id:"rxbody", name:"Cross-Body Shoulder",     holds:2, sec:25, cap:45, per:"per side", tip:"Pull the arm across, shoulder stays down."},
- rtri:   {id:"rtri",   name:"Overhead Triceps Stretch",holds:2, sec:25, cap:45, per:"per side", tip:"Elbow to the sky, hand down the spine."},
+ rsplit: {id:"rsplit", name:"Deep Split Squat",        mode:"reps", sets:2, reps:10, cap:14, per:"per side", tip:"Long lunge, back knee hovers, sink deep each rep."},
+ rpan:   {id:"rpan",   name:"Pancake Stretch",         holds:3, sec:50, cap:70, tip:"Legs wide, fold forward with a flat back."},
+ rpigeon:{id:"rpigeon",name:"Pigeon Pose",             holds:2, sec:60, cap:90, per:"per side", tip:"Front shin angled, hips square, fold forward."},
+ r9090:  {id:"r9090",  name:"90/90 Hip Hold",          holds:2, sec:60, cap:90, per:"per side", tip:"Both legs at 90° — LEFT/RIGHT = which leg leads in front."},
+ rsquat: {id:"rsquat", name:"Deep Squat Hold",         holds:3, sec:50, cap:70, tip:"Heels down, knees pushed out with elbows."},
+ rcouch: {id:"rcouch", name:"Couch Stretch",           holds:2, sec:50, cap:75, per:"per side", tip:"Rear foot on wall, squeeze glute, ribs down."},
+ rfold:  {id:"rfold",  name:"Standing Forward Fold",   holds:3, sec:40, cap:60, tip:"Soft knees, let the spine hang."},
+ rwrist: {id:"rwrist", name:"Wrist Flexor Stretch",    holds:2, sec:45, cap:60, per:"per side", tip:"Arm straight, pull fingers back gently."},
+ rpray:  {id:"rpray",  name:"Forearm Prayer Stretch",  holds:3, sec:40, cap:60, tip:"Palms together, lower hands until forearms bite."},
+ rpec:   {id:"rpec",   name:"Doorway Pec Stretch",     holds:2, sec:60, cap:85, per:"per side", tip:"Elbow at 90°, step through the door."},
+ rlat:   {id:"rlat",   name:"Overhead Lat Reach",      holds:2, sec:60, cap:85, per:"per side", tip:"Grab a frame overhead, sink hips away."},
+ rthor:  {id:"rthor",  name:"Thoracic Rotations (open-book)", mode:"reps", sets:2, reps:10, cap:14, per:"per side", tip:"On all fours, hand behind head — rotate open, return, repeat."},
+ rankle: {id:"rankle", name:"Ankle Rocks (knee to wall)", mode:"reps", sets:2, reps:12, cap:16, per:"per side", tip:"Rock the knee over the toes and back, heel down."},
+ rxbody: {id:"rxbody", name:"Cross-Body Shoulder",     holds:2, sec:55, cap:75, per:"per side", tip:"Pull the arm across, shoulder stays down."},
+ rtri:   {id:"rtri",   name:"Overhead Triceps Stretch",holds:2, sec:55, cap:75, per:"per side", tip:"Elbow to the sky, hand down the spine."},
  rbi:    {id:"rbi",    name:"Wall Biceps Stretch",     holds:2, sec:25, cap:45, per:"per side", tip:"Palm on wall behind you, turn away slowly."},
  rneck:  {id:"rneck",  name:"Neck Side Stretch",       holds:2, sec:40, cap:60, per:"per side", tip:"Ear toward shoulder, opposite arm reaches down."},
+ squad:  {id:"squad",  name:"Standing Quad Stretch",   holds:2, sec:25, cap:40, per:"per side", tip:"Grab the ankle behind you, knees together, stand tall."},
+ shamf:  {id:"shamf",  name:"Standing Hamstring (heel out)", holds:2, sec:25, cap:40, per:"per side", tip:"Heel forward on the ground, hinge until it pulls."},
+ shipf:  {id:"shipf",  name:"Standing Hip Flexor Lunge",holds:2, sec:25, cap:45, per:"per side", tip:"Split stance, tuck the pelvis, squeeze the rear glute."},
+ sfig4:  {id:"sfig4",  name:"Standing Figure-4",       holds:2, sec:25, cap:40, per:"per side", tip:"Ankle over knee, sit back — hold something stable."},
+ sadd:   {id:"sadd",   name:"Side-Lunge Adductor",     holds:2, sec:25, cap:40, per:"per side", tip:"Wide stance, shift onto one leg, feel the inner thigh."},
+ tknee:  {id:"tknee",  name:"Seated Knee-to-Chest",    holds:2, sec:20, cap:30, per:"per side", tip:"Seated in a chair, hug one knee up gently."},
+ tfig4:  {id:"tfig4",  name:"Seated Figure-4",         holds:2, sec:20, cap:30, per:"per side", tip:"Ankle over opposite knee, lean forward slightly."},
+ tham:   {id:"tham",   name:"Seated Hamstring Reach",  holds:2, sec:20, cap:30, per:"per side", tip:"Heel out on floor, hinge forward until a light pull."},
+ tcalf:  {id:"tcalf",  name:"Supported Calf Stretch",  holds:2, sec:20, cap:30, per:"per side", tip:"Hands on chair back or wall, step one foot back, heel down."},
+ tankle: {id:"tankle", name:"Seated Ankle Circles",    mode:"reps", sets:2, reps:8, cap:12, per:"per side", tip:"Circles each direction — set 1 left ankle, set 2 right."},
+ twall:  {id:"twall",  name:"Wall Pec Stretch",        holds:2, sec:20, cap:30, per:"per side", tip:"Palm on wall, turn away until a gentle chest stretch."},
+ tneck:  {id:"tneck",  name:"Seated Neck Side Stretch",holds:2, sec:15, cap:25, per:"per side", tip:"Ear toward shoulder — gentle, no pulling."},
+ troll:  {id:"troll",  name:"Shoulder Rolls",          mode:"reps", sets:2, reps:8, cap:12, tip:"Slow big circles, backward."},
+ treach: {id:"treach", name:"Seated Overhead Reach",   holds:2, sec:15, cap:25, tip:"Both arms up, sit tall, breathe."},
+ twrist: {id:"twrist", name:"Gentle Wrist Stretch",    holds:2, sec:15, cap:25, per:"per side", tip:"Fingers back with the other hand, light pressure only."},
 };
-function W(k,o){ return Object.assign({},STRETCH[k],o); }
-/* TRAINEE weekend sessions: chair/wall supported, no floor work, gentle holds (~5-7 min) */
-const TSAT=[
- {id:"tknee",  name:"Seated Knee-to-Chest",     holds:2, sec:20, cap:30, per:"per side", tip:"Seated in a chair, hug one knee up gently."},
- {id:"tfig4",  name:"Seated Figure-4",          holds:2, sec:20, cap:30, per:"per side", tip:"Ankle over opposite knee, lean forward slightly."},
- {id:"tham",   name:"Seated Hamstring Reach",   holds:2, sec:20, cap:30, per:"per side", tip:"Heel out on floor, hinge forward until a light pull."},
- {id:"tcalf",  name:"Supported Calf Stretch",   holds:2, sec:20, cap:30, per:"per side", tip:"Hands on chair back, step one foot back, heel down."},
- {id:"tankle", name:"Seated Ankle Circles",     mode:"reps", sets:2, reps:8, cap:12, per:"per side", tip:"Circles each direction — set 1 left ankle, set 2 right."},
-];
-const TSUN=[
- {id:"twall",  name:"Wall Pec Stretch",         holds:2, sec:20, cap:30, per:"per side", tip:"Palm on wall, turn away until a gentle chest stretch."},
- {id:"tneck",  name:"Seated Neck Side Stretch", holds:2, sec:15, cap:25, per:"per side", tip:"Ear toward shoulder — gentle, no pulling."},
- {id:"troll",  name:"Shoulder Rolls",           mode:"reps", sets:2, reps:8, cap:12, tip:"Slow big circles, backward."},
- {id:"treach", name:"Seated Overhead Reach",    holds:2, sec:15, cap:25, tip:"Both arms up, sit tall, breathe."},
- {id:"twrist", name:"Gentle Wrist Stretch",     holds:2, sec:15, cap:25, per:"per side", tip:"Fingers back with the other hand, light pressure only."},
-];
-/* weekend sessions: ~20 min guided, scaling toward ~30 min at caps */
-const RSAT=[
- W("relph",{sets:3,reps:12,cap:18}),
- W("rsplit",{sets:2,reps:10,cap:14}),
- W("rpan",{holds:3,sec:50,cap:75}),
- W("rpigeon",{holds:2,sec:60,cap:90}),
- W("r9090",{holds:2,sec:60,cap:90,tip:"Both legs at 90° — LEFT/RIGHT = which leg leads in front."}),
- W("rsquat",{holds:3,sec:50,cap:75}),
- W("rcouch",{holds:2,sec:50,cap:75}),
- W("rfold",{holds:3,sec:40,cap:60}),
-];
-const RSUN=[
- W("rwrist",{holds:2,sec:45,cap:60}),
- W("rpray",{holds:3,sec:40,cap:60}),
- W("rpec",{holds:2,sec:60,cap:85}),
- W("rlat",{holds:2,sec:60,cap:85}),
- W("rthor",{sets:2,reps:10,cap:14}),
- W("rankle",{sets:2,reps:12,cap:16}),
- W("rxbody",{holds:2,sec:55,cap:75}),
- W("rtri",{holds:2,sec:55,cap:75}),
- W("rneck",{holds:2,sec:40,cap:60}),
-];
-/* weekday bonus recovery: stretches for that day's muscle group (after gate cleared) */
-const RECBONUS=[
- ["rlat","rthor","rbi","rwrist"],
- ["relph","rcouch","rpigeon","rsquat"],
- ["rpec","rxbody","rtri","rpray"],
- ["relph","rankle","rsquat","rfold"],
- ["rpec","rtri","rlat","rpray"],
-].map(a=>a.map(k=>STRETCH[k]));
+function SL(ids){ return ids.map(k=>STRETCH[k]); }
 
-/* ---------- gates: each lift gate has A and B workouts ---------- */
-const DAYS=[
- {name:"BACK & BICEPS", ab:[
+/* ---------- stretch gate lists ---------- */
+const SGATES={
+ satHip:  {name:"RECOVERY — HIPS & LOWER",      ex:SL(["relph","rsplit","rpan","rpigeon","r9090","rsquat","rcouch","rfold"])},
+ sunUp:   {name:"RECOVERY — UPPER & CLIMB PREP",ex:SL(["rwrist","rpray","rpec","rlat","rthor","rankle","rxbody","rtri","rneck"])},
+ gfull:   {name:"RECOVERY — GENTLE FULL BODY",  ex:SL(["tknee","tfig4","tham","tcalf","twall","tneck","troll","treach","twrist"])},
+ momFris: {name:"RECOVERY — POST-FRISBEE",      ex:SL(["squad","shamf","shipf","sfig4","sadd","tcalf","rxbody","rtri"])},
+ momFull: {name:"RECOVERY — FULL BODY",         ex:SL(["relph","rsquat","rcouch","rpigeon","rpec","rlat","rthor","rwrist","rneck"])},
+ joyUpS:  {name:"RECOVERY — UPPER & WRISTS",    ex:SL(["rwrist","rpray","rpec","rlat","rthor","rxbody","rneck"])},
+ joyLowS: {name:"RECOVERY — HIPS & LOWER",      ex:SL(["relph","rsplit","rpigeon","r9090","rcouch","rfold"])},
+ joyFull: {name:"RECOVERY — FULL BODY",         ex:SL(["rsquat","rpan","rpigeon","rpec","rlat","rthor","rwrist","rneck"])},
+};
+/* trainee tier gets gentle versions of hunter weekend gates */
+const TGATES={satHip:"gfull", sunUp:"gfull"};
+
+/* ---------- lift gate tables (ab = alternating A/B workouts) ---------- */
+const LIFTS={
+ hBack:{name:"BACK & BICEPS", ab:[
   [{id:"latpull", name:"Lat Pulldown",             sets:4, lo:8,  hi:12, inc:5},
    {id:"row",     name:"Seated Cable Row",         sets:3, lo:8,  hi:12, inc:5},
    {id:"dbrow",   name:"One-Arm Dumbbell Row",     sets:3, lo:10, hi:12, inc:5,  note:"all reps per arm, one side at a time"},
@@ -341,9 +330,8 @@ const DAYS=[
    {id:"ngpull",  name:"Neutral-Grip Pulldown",    sets:3, lo:8,  hi:12, inc:5},
    {id:"csrow",   name:"Chest-Supported Row",      sets:3, lo:10, hi:12, inc:5},
    {id:"incurl",  name:"Incline DB Curl",          sets:3, lo:10, hi:15, inc:5,  note:"weight = each dumbbell"},
-   {id:"ccurl",   name:"Cable Curl",               sets:3, lo:10, hi:15, inc:5}]
- ]},
- {name:"LEGS", ab:[
+   {id:"ccurl",   name:"Cable Curl",               sets:3, lo:10, hi:15, inc:5}]]},
+ hLegs:{name:"LEGS", ab:[
   [{id:"squat",   name:"Barbell Back Squat",       sets:4, lo:6,  hi:10, inc:10},
    {id:"rdl",     name:"Romanian Deadlift",        sets:3, lo:8,  hi:12, inc:10},
    {id:"legpress",name:"Leg Press",                sets:3, lo:10, hi:15, inc:10},
@@ -353,9 +341,8 @@ const DAYS=[
    {id:"bss",     name:"Bulgarian Split Squat",    sets:3, lo:10, hi:12, inc:5,  note:"all reps per leg · dumbbells in hands"},
    {id:"hthrust", name:"Hip Thrust",               sets:3, lo:10, hi:15, inc:10},
    {id:"legext",  name:"Leg Extension",            sets:3, lo:12, hi:15, inc:5},
-   {id:"scalf",   name:"Seated Calf Raise",        sets:4, lo:12, hi:20, inc:5}]
- ]},
- {name:"SHOULDERS & ARMS", ab:[
+   {id:"scalf",   name:"Seated Calf Raise",        sets:4, lo:12, hi:20, inc:5}]]},
+ hSho:{name:"SHOULDERS & ARMS", ab:[
   [{id:"ohp",     name:"Seated DB Shoulder Press", sets:4, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
    {id:"latraise",name:"Lateral Raise",            sets:4, lo:12, hi:20, inc:5,  note:"weight = each dumbbell"},
    {id:"facepull",name:"Face Pull",                sets:3, lo:12, hi:15, inc:5},
@@ -365,10 +352,8 @@ const DAYS=[
    {id:"clat",    name:"Cable Lateral Raise",      sets:4, lo:12, hi:20, inc:5,  note:"all reps per arm, one side at a time"},
    {id:"rpd",     name:"Reverse Pec Deck",         sets:3, lo:12, hi:15, inc:5},
    {id:"pcurl",   name:"Preacher Curl",            sets:3, lo:10, hi:12, inc:5},
-   {id:"dips",    name:"Dips",                     sets:3, lo:6,  hi:10, inc:5,  assist:true, note:"assist = negative lb"}]
- ]},
- {name:"ENDURANCE TRAINING", cardio:true},
- {name:"CHEST & TRICEPS", ab:[
+   {id:"dips",    name:"Dips",                     sets:3, lo:6,  hi:10, inc:5,  assist:true, note:"assist = negative lb"}]]},
+ hChest:{name:"CHEST & TRICEPS", ab:[
   [{id:"bench",   name:"Barbell Bench Press",      sets:4, lo:6,  hi:10, inc:5},
    {id:"incdb",   name:"Incline Dumbbell Press",   sets:3, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
    {id:"fly",     name:"Cable Fly",                sets:3, lo:12, hi:15, inc:5},
@@ -378,18 +363,60 @@ const DAYS=[
    {id:"mcp",     name:"Machine Chest Press",      sets:3, lo:8,  hi:12, inc:5},
    {id:"pecdeck", name:"Pec Deck",                 sets:3, lo:12, hi:15, inc:5},
    {id:"cgb",     name:"Close-Grip Bench Press",   sets:3, lo:8,  hi:12, inc:5},
-   {id:"sapd",    name:"Single-Arm Pushdown",      sets:3, lo:10, hi:15, inc:5,  note:"all reps per arm, one side at a time"}]
- ]},
- {name:"RECOVERY — HIPS & LOWER", rec:true, ex:RSAT},
- {name:"RECOVERY — UPPER & CLIMB PREP", rec:true, ex:RSUN},
-];
-const DAYLBL=["MON","TUE","WED","THU","FRI","SAT","SUN"];
-function gateForToday(){
-  const wd=new Date().getDay();
-  if(wd>=1 && wd<=5) return wd-1;
-  return wd===6 ? 5 : 6; /* Sat=5, Sun=6 */
-}
-function exList(i,v){ return DAYS[i].ab[v?1:0]; }
+   {id:"sapd",    name:"Single-Arm Pushdown",      sets:3, lo:10, hi:15, inc:5,  note:"all reps per arm, one side at a time"}]]},
+ joyA:{name:"GLUTES & LEGS A", ab:[
+  [{id:"jht",     name:"Barbell Hip Thrust",       sets:4, lo:8,  hi:12, inc:10},
+   {id:"jsq",     name:"Barbell Back Squat",       sets:4, lo:8,  hi:12, inc:10},
+   {id:"jrdl",    name:"Romanian Deadlift",        sets:3, lo:10, hi:12, inc:10},
+   {id:"jabd",    name:"Hip Abduction Machine",    sets:3, lo:12, hi:20, inc:5},
+   {id:"jcalf",   name:"Standing Calf Raise",      sets:3, lo:12, hi:20, inc:10}]]},
+ joyU:{name:"UPPER & CORE", ab:[
+  [{id:"jlat",    name:"Lat Pulldown",             sets:3, lo:8,  hi:12, inc:5},
+   {id:"jrow",    name:"Seated Cable Row",         sets:3, lo:10, hi:12, inc:5},
+   {id:"jsp",     name:"DB Shoulder Press",        sets:3, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
+   {id:"jcc",     name:"Cable Crunch",             sets:3, lo:12, hi:15, inc:5}],
+  [{id:"jng",     name:"Neutral-Grip Pulldown",    sets:3, lo:8,  hi:12, inc:5},
+   {id:"jscr",    name:"Single-Arm Cable Row",     sets:3, lo:10, hi:12, inc:5,  note:"all reps per arm, one side at a time"},
+   {id:"jlr",     name:"Lateral Raise",            sets:3, lo:12, hi:20, inc:5,  note:"weight = each dumbbell"},
+   {id:"jhkr",    name:"Hanging Knee Raise",       sets:3, lo:10, hi:15, inc:0,  bw:true, note:"bodyweight — push the reps up"}]]},
+ joyB:{name:"GLUTES & LEGS B", ab:[
+  [{id:"jbss",    name:"Bulgarian Split Squat",    sets:3, lo:10, hi:12, inc:5,  note:"all reps per leg · dumbbells in hands"},
+   {id:"jlp",     name:"Leg Press (feet high)",    sets:4, lo:10, hi:15, inc:10, note:"feet high on platform = glute bias"},
+   {id:"jkick",   name:"Cable Kickback",           sets:3, lo:12, hi:15, inc:5,  note:"all reps per leg, one side at a time"},
+   {id:"jabd",    name:"Hip Abduction Machine",    sets:3, lo:15, hi:20, inc:5},
+   {id:"jscalf",  name:"Seated Calf Raise",        sets:3, lo:12, hi:20, inc:10}]]},
+ momUp:{name:"UPPER BODY", ab:[
+  [{id:"mdbp",    name:"DB Bench Press",           sets:3, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
+   {id:"mrow",    name:"One-Arm DB Row",           sets:3, lo:10, hi:12, inc:5,  note:"all reps per arm, one side at a time"},
+   {id:"msp",     name:"Seated DB Shoulder Press", sets:3, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
+   {id:"mcurl",   name:"DB Curl",                  sets:2, lo:10, hi:15, inc:5,  note:"weight = each dumbbell"},
+   {id:"mext",    name:"Overhead DB Extension",    sets:2, lo:10, hi:15, inc:5}]]},
+ momLow:{name:"LOWER BODY", ab:[
+  [{id:"msq",     name:"Barbell Back Squat",       sets:4, lo:8,  hi:12, inc:10},
+   {id:"mrdl",    name:"Romanian Deadlift",        sets:3, lo:10, hi:12, inc:10},
+   {id:"mlun",    name:"DB Reverse Lunge",         sets:3, lo:8,  hi:10, inc:5,  note:"all reps per leg · dumbbells in hands"},
+   {id:"mgb",     name:"Barbell Glute Bridge",     sets:3, lo:10, hi:15, inc:10},
+   {id:"mcalf",   name:"Standing Calf Raise",      sets:3, lo:15, hi:20, inc:10}]]},
+ eiFull:{name:"FULL BODY", ab:[
+  [{id:"edbp",    name:"DB Bench Press",           sets:2, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
+   {id:"erow",    name:"Bench-Supported One-Arm Row",sets:2,lo:10, hi:12, inc:5,  note:"all reps per arm, one side at a time"},
+   {id:"esp",     name:"Seated DB Shoulder Press", sets:2, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
+   {id:"egsq",    name:"Goblet Squat to Bench",    sets:2, lo:10, hi:12, inc:5,  note:"sit back to the bench, stand tall"},
+   {id:"erdl",    name:"DB Romanian Deadlift",     sets:2, lo:10, hi:12, inc:5}],
+  [{id:"ebrow",   name:"Two-DB Bent Row",          sets:2, lo:10, hi:12, inc:5},
+   {id:"elr",     name:"DB Lateral Raise",         sets:2, lo:12, hi:15, inc:5,  note:"weight = each dumbbell"},
+   {id:"estep",   name:"Low Step-Ups",             sets:2, lo:8,  hi:10, inc:5,  note:"all reps per leg · hold something stable"},
+   {id:"egb",     name:"DB Glute Bridge",          sets:2, lo:10, hi:15, inc:5},
+   {id:"ecalf",   name:"DB Calf Raise",            sets:2, lo:12, hi:15, inc:5}]]},
+ alFull:{name:"FULL BODY (LIGHT)", ab:[
+  [{id:"asts",    name:"DB Sit-to-Stand (goblet)", sets:2, lo:8,  hi:12, inc:5,  note:"hold one DB at the chest, chair behind you"},
+   {id:"asp",     name:"Seated DB Shoulder Press", sets:2, lo:8,  hi:10, inc:5,  note:"weight = each dumbbell"},
+   {id:"arow",    name:"Supported DB Row",         sets:2, lo:10, hi:12, inc:5,  note:"one hand braced on a chair, all reps per arm"},
+   {id:"awpu",    name:"Wall Push-Ups",            sets:2, lo:8,  hi:15, inc:0,  bw:true, note:"bodyweight — push the reps up"},
+   {id:"acurl",   name:"Standing DB Curl",         sets:2, lo:10, hi:12, inc:5,  note:"weight = each dumbbell"},
+   {id:"aheel",   name:"Heel Raises",              sets:2, lo:12, hi:15, inc:0,  bw:true, note:"hold a chair back for balance"}]]},
+};
+function exListK(key,v){ const g=LIFTS[key]; return g.ab[(v&&g.ab.length>1)?1:0]; }
 
 const CARDIO = [
  {run:1,  walk:2,  rounds:7}, {run:1.5,walk:1.5,rounds:7}, {run:2,  walk:1,  rounds:7},
@@ -398,22 +425,115 @@ const CARDIO = [
  {run:12, walk:1,  rounds:2}, {run:20, walk:0,  rounds:1}, {run:25, walk:0,  rounds:1},
  {run:30, walk:0,  rounds:1},
 ];
-
 const RANKS = [["E",0],["D",10],["C",25],["B",45],["A",60],["S",75],["SS",88],["SSS",100]];
 
-/* ---------- difficulty profiles ---------- */
+/* ---------- weekly schedules: Mon(0) .. Sun(6) ----------
+   L=lift gate  C=run/walk ladder  RS=run (simple, cleared/not)
+   PH=placeholder gate  S=stretch gate (sch=scheduled)  POOL=weekend pool */
+function L(key){ return {t:"lift",key}; }
+function Sg(key,sch){ return {t:"stretch",key,sch:!!sch}; }
+const WEEKS={
+ hunter:  [L("hBack"),L("hLegs"),L("hSho"),{t:"cardio"},L("hChest"),Sg("satHip",true),Sg("sunUp",true)],
+ awakened:[L("hBack"),L("hLegs"),L("hSho"),{t:"cardio"},L("hChest"),Sg("satHip",true),Sg("sunUp",true)],
+ trainee: [L("hBack"),L("hLegs"),L("hSho"),{t:"cardio"},L("hChest"),Sg("gfull",true),Sg("gfull",true)],
+ owen:    [L("hBack"),{t:"ph",name:"SPECIALIZED LEG TRAINING",desc:"Owen's custom leg workout — details pending. Do it your way, then mark it cleared."},L("hSho"),{t:"cardio"},L("hChest"),Sg("satHip",true),Sg("sunUp",true)],
+ joy:     [L("joyA"),Sg("joyUpS"),L("joyU"),Sg("joyLowS"),L("joyB"),Sg("joyFull"),{t:"runsimple",name:"RUN — WITH ADAM",desc:"Pace and distance set by Adam's ladder. Clear it when the run is done."}],
+ jocelyne:[L("momUp"),Sg("momFris"),Sg("momFull",true),Sg("momFris"),L("momLow"),{t:"pool"},{t:"pool"}],
+ eileen:  [L("eiFull"),Sg("gfull"),L("eiFull"),Sg("gfull"),L("eiFull"),Sg("gfull"),Sg("gfull")],
+ allison: [L("alFull"),Sg("gfull"),L("alFull"),Sg("gfull"),L("alFull"),Sg("gfull"),Sg("gfull")],
+};
+/* jocelyne weekend pool: one run + one full-body stretch, either day, each once per weekend */
+const POOL_GATES=[{t:"cardio",lbl:"RUN (ladder)"},{t:"stretch",key:"momFull",lbl:"FULL-BODY STRETCH"}];
+
+/* ---------- post-gate bonus stretch lists by gate key ---------- */
+const BONK={
+ hBack:  SL(["rlat","rthor","rbi","rwrist"]),
+ hLegs:  SL(["relph","rcouch","rpigeon","rsquat"]),
+ hSho:   SL(["rpec","rxbody","rtri","rpray"]),
+ hChest: SL(["rpec","rtri","rlat","rpray"]),
+ cardio: SL(["relph","rankle","rsquat","rfold"]),
+ ph:     SL(["squad","shamf","sfig4","tcalf"]),
+ runsimple: SL(["squad","shamf","tcalf","sfig4"]),
+ joyA:   SL(["rpigeon","rcouch","r9090","rfold"]),
+ joyU:   SL(["rlat","rpec","rxbody","rwrist"]),
+ joyB:   SL(["rpigeon","rcouch","r9090","rfold"]),
+ momUp:  SL(["rpec","rtri","rlat","rwrist"]),
+ momLow: SL(["squad","shamf","shipf","sfig4"]),
+ eiFull: SL(["tknee","tfig4","twall","tneck"]),
+ alFull: SL(["tknee","tfig4","twall","tneck"]),
+};
+/* ---------- warm-ups by gate key: two no-equipment moves ---------- */
+const WARMK={
+ hBack:["Arm swings — 15 reps","Bent-over Y raises (no weight) — 12 reps"],
+ hLegs:["Bodyweight squats — 15 reps","Leg swings — 12 per side"],
+ hSho:["Arm circles — 15 each way","Wall slides — 10 reps"],
+ hChest:["Push-ups — 10 reps","Horizontal arm crossovers — 15 reps"],
+ joyA:["Glute bridges — 15 reps","Bodyweight squats — 15 reps"],
+ joyB:["Glute bridges — 15 reps","Leg swings — 12 per side"],
+ joyU:["Arm circles — 15 each way","Wall slides — 10 reps"],
+ momUp:["Arm circles — 15 each way","Wall slides — 10 reps"],
+ momLow:["Bodyweight squats — 15 reps","Leg swings — 12 per side"],
+ eiFull:["March in place — 45 seconds","Arm circles — 10 each way"],
+ alFull:["March in place — 45 seconds","Arm circles — 10 each way"],
+};
+
+/* ---------- profiles: dailies, XP, penalties ---------- */
 const PROFILES={
- hunter:  {lbl:"HUNTER",   push:"Push-ups",       sit:"Sit-ups",       run:"Run",  squat:"Squats",
-           base:[50,15], cap:[100,30], repStep:5, repPer:3, minPer:2, penExtra:10, dist:true},
- awakened:{lbl:"AWAKENED", push:"Push-ups (knees ok)", sit:"Crunches", run:"Jog / brisk walk", squat:null,
-           base:[20,10], cap:[50,25],  repStep:3, repPer:3, minPer:2, penExtra:8,  dist:false},
- trainee: {lbl:"TRAINEE",  push:"Wall push-ups",  sit:"Sit-to-stands", run:"Walk", squat:null,
-           base:[8,10],  cap:[25,25],  repStep:2, repPer:3, minPer:2, penExtra:5,  dist:false},
+ hunter:  {lbl:"HUNTER (Adam)",   desc:"5-day gym program · 50/50/50 + run",
+           reps:["Push-ups","Sit-ups","Squats"], repBase:50, repCap:100, repStep:5, repPer:3,
+           timed:[{n:"Run",base:15,cap:30,per:2,kind:"run",dist:true}],
+           pen:{label:"Run",mode:"dyn",extra:10}, workXP:250, deload:true},
+ owen:    {lbl:"OWEN",            desc:"Adam's program + custom leg day",
+           reps:["Push-ups","Sit-ups","Squats"], repBase:50, repCap:100, repStep:5, repPer:3,
+           timed:[{n:"Run",base:15,cap:30,per:2,kind:"run",dist:true}],
+           pen:{label:"Run",mode:"dyn",extra:10}, workXP:250, deload:true},
+ joy:     {lbl:"JOY",             desc:"3-day lower focus + Sunday run",
+           reps:["Glute bridges","Air squats"], repBase:20, repCap:50, repStep:1, repPer:3,
+           timed:[{n:"Plank",base:2,cap:6,per:22,kind:"plank"}],
+           pen:{label:"Run",mode:"fix",min:20}, workXP:295, deload:true},
+ jocelyne:{lbl:"JOCELYNE",        desc:"Mon upper · Fri lower · frisbee Tue/Thu",
+           reps:["Push-ups","Air squats"], repBase:20, repCap:50, repStep:1, repPer:3,
+           timed:[{n:"Plank",base:5,cap:10,per:18,kind:"plank"}],
+           pen:{label:"Run",mode:"fix",min:20}, workXP:390, deload:true},
+ eileen:  {lbl:"EILEEN",          desc:"M/W/F full body · home gym",
+           reps:["Wall push-ups","Sit-to-stands"], repBase:8, repCap:25, repStep:2, repPer:3,
+           timed:[{n:"Walk",base:10,cap:25,per:2,kind:"run"}],
+           pen:{label:"Walk",mode:"fix",min:15}, workXP:390, deload:false},
+ allison: {lbl:"ALLISON",         desc:"M/W/F light full body",
+           reps:["Wall push-ups","Sit-to-stands"], repBase:8, repCap:25, repStep:2, repPer:3,
+           timed:[{n:"Walk",base:10,cap:25,per:2,kind:"run"}],
+           pen:{label:"Walk",mode:"fix",min:15}, workXP:390, deload:false},
+ awakened:{lbl:"AWAKENED",        desc:"generic middle tier",
+           reps:["Push-ups (knees ok)","Crunches"], repBase:20, repCap:50, repStep:3, repPer:3,
+           timed:[{n:"Jog / brisk walk",base:10,cap:25,per:2,kind:"run"}],
+           pen:{label:"Jog",mode:"fix",min:18}, workXP:240, deload:false},
+ trainee: {lbl:"TRAINEE",         desc:"generic gentle tier",
+           reps:["Wall push-ups","Sit-to-stands"], repBase:8, repCap:25, repStep:2, repPer:3,
+           timed:[{n:"Walk",base:10,cap:25,per:2,kind:"run"}],
+           pen:{label:"Walk",mode:"fix",min:15}, workXP:240, deload:false},
 };
 function prof(){ return PROFILES[S.profile]||PROFILES.hunter; }
+function weekPlan(){ return WEEKS[S.profile]||WEEKS.hunter; }
+function planFor(i){
+  let p=weekPlan()[i];
+  if(S.profile==="trainee"&&p.t==="stretch"&&TGATES[p.key]) p=Object.assign({},p,{key:TGATES[p.key]});
+  return p;
+}
+function gateForToday(){
+  const wd=new Date().getDay();
+  return (wd>=1&&wd<=5)?wd-1:(wd===6?5:6);
+}
+const DAYLBL=["MON","TUE","WED","THU","FRI","SAT","SUN"];
 function trainWeek(){ return Math.floor(dayDiff(S.trainStart||todayStr(), todayStr())/7)+1; }
-function isDeload(){ return trainWeek()%8===0; }
+function isDeload(){ return !!prof().deload && trainWeek()%8===0; }
 function deloadW(w){ return w<0 ? w : Math.max(5, Math.round(w*0.85/5)*5); }
+/* weekend-id for jocelyne's pool: the Saturday date of this weekend */
+function weekendId(){
+  const d=new Date(); const wd=d.getDay();
+  const sat=new Date(d); sat.setDate(d.getDate()+(6-wd)%7-(wd===0?7:0)+(wd===0?0:0));
+  if(wd===0){ sat.setDate(d.getDate()-1); }
+  return sat.toLocaleDateString("en-CA");
+}
 
 function defaultDaily(){
   return { count:0, lastComplete:null, penalty:false, penClear:null,
@@ -422,7 +542,7 @@ function defaultDaily(){
 function defaultState(){
   return { level:1, xp:0, totalXp:0, quests:0, cardioDone:0, tonnage:0,
            streak:0, bestStreak:0, lastDone:null, lastWeighXp:null,
-           name:null, profile:"hunter", gateVar:[0,0,0,0,0],
+           name:null, profile:"hunter", gateV:{},
            lastBackup:null, bkSnooze:null, decayNote:null,
            ex:{}, cardioLvl:1, recDone:0, recN:{}, weights:[], log:[], session:null,
            daily: defaultDaily() };
@@ -431,11 +551,15 @@ let S;
 try { S = JSON.parse(lsGet(KEY)) || defaultState(); }
 catch(e){ S = defaultState(); }
 if(!S.daily) S.daily = defaultDaily();
-if(!Array.isArray(S.daily.parts) || typeof S.daily.parts[0]!=="number") S.daily.parts=[0,0,0,0];
-while(S.daily.parts.length<4) S.daily.parts.push(0);
+if(!Array.isArray(S.daily.parts) || typeof S.daily.parts[0]!=="number") S.daily.parts=[];
 if(S.name===undefined) S.name=null;
 if(!S.profile) S.profile="hunter";
-if(!Array.isArray(S.gateVar)) S.gateVar=[0,0,0,0,0];
+if(!S.gateV) S.gateV={};
+if(Array.isArray(S.gateVar)){
+  S.gateV.hBack=S.gateVar[0]||0; S.gateV.hLegs=S.gateVar[1]||0;
+  S.gateV.hSho=S.gateVar[2]||0;  S.gateV.hChest=S.gateVar[4]||0;
+  delete S.gateVar;
+}
 if(S.lastBackup===undefined){ S.lastBackup=null; S.bkSnooze=null; }
 for(const id in S.ex){ const st=S.ex[id]; if(st.calibrated && !st.base) st.base=st.best||0; }
 if(typeof S.recDone!=="number") S.recDone=0;
@@ -507,12 +631,10 @@ function sideTxt(e){ /* full wording for session cards */
 function sideShort(e){ /* compact for previews */
   return `${recRows(e)} × ${recLbl(e)}${e.alt?" · alt.":e.per?" · L/R":(e.mode==="reps"?"":" · both")}`;
 }
-function gateRecList(i){ return S.profile==="trainee" ? (i===5?TSAT:TSUN) : DAYS[i].ex; }
-function recList(sess){ return sess.rbonus ? RECBONUS[sess.day] : gateRecList(sess.day); }
-function recTitle(sess){ return sess.rbonus ? "RECOVERY BONUS — "+DAYS[sess.day].name : DAYS[sess.day].name; }
+
 function save(){ lsSet(KEY, JSON.stringify(S)); }
 
-const exDef = id => { for(const d of DAYS){ if(d.ab) for(const arr of d.ab) for(const e of arr) if(e.id===id) return e; } return null; };
+const exDef = id => { for(const k in LIFTS){ for(const arr of LIFTS[k].ab) for(const e of arr) if(e.id===id) return e; } return null; };
 const exSt  = id => { if(!S.ex[id]) S.ex[id]={calibrated:false,weight:0,fails:0,best:0,base:0}; return S.ex[id]; };
 const round5  = w => Math.max(5, Math.round(w/5)*5);
 const round5a = w => Math.round(w/5)*5;
@@ -563,13 +685,15 @@ function renderNav(){
 function go(v){ curView=v; renderNav(); VIEWS[v](); window.scrollTo(0,0); }
 
 /* ---------- name / profile ---------- */
+/* ---------- name / profile registration ---------- */
 let nmTmp=null;
 function askName(first){
-  modal(`<h2>⚠ SYSTEM</h2><div class="muted">State your name, Hunter.</div>
+  const opts=["hunter","owen","joy","jocelyne","eileen","allison","awakened","trainee"];
+  modal(`<h2>⚠ SYSTEM</h2><div class="muted">State your name, Hunter, and select your program.</div>
     <input class="cin" style="width:80%;margin:12px 0" id="nmIn" maxlength="14" placeholder="NAME" value="${nmTmp!==null?nmTmp:(first?"":(S.name||""))}">
-    <div class="muted" style="font-size:11px;margin:4px 0 8px">TRAINING PROFILE</div>
-    ${Object.entries(PROFILES).map(([k,p])=>`
-      <button class="btn ${S.profile===k?"":"ghost"}" style="margin-top:6px;font-size:11px" onclick="pickProf('${k}')">${p.lbl} — ${p.base[0]}/${p.base[0]} reps · ${p.base[1]} min ${p.run.toLowerCase()}</button>`).join("")}
+    <div style="max-height:38vh;overflow-y:auto">
+    ${opts.map(k=>`<button class="btn ${S.profile===k?"":"ghost"}" style="margin-top:6px;font-size:11px" onclick="pickProf('${k}')">${PROFILES[k].lbl} — ${PROFILES[k].desc}</button>`).join("")}
+    </div>
     <button class="btn" style="margin-top:14px" onclick="saveName()">REGISTER</button>`);
 }
 function pickProf(k){ const el=document.getElementById("nmIn"); nmTmp=el?el.value:nmTmp; S.profile=k; save(); askName(false); }
@@ -579,15 +703,27 @@ function saveName(){
   S.name=v||S.name||"HUNTER"; nmTmp=null; save(); closeModal(); renderHeader(); lbLast=0; pushLB(); go("quest");
 }
 
-/* ---------- daily quest ---------- */
-function dailyTargets(){
+/* ---------- daily quest (generalized) ---------- */
+function dqRepTarget(){
   const p=prof(), c=S.daily.count;
-  return { reps:Math.min(p.cap[0], p.base[0]+Math.floor(c/p.repPer)*p.repStep),
-           run: Math.min(p.cap[1], p.base[1]+Math.floor(c/p.minPer)) };
+  return Math.min(p.repCap, p.repBase + Math.floor(c/p.repPer)*p.repStep);
 }
-function dailyGoals(){ const dt=dailyTargets(); const p=prof();
-  return p.squat ? [dt.reps, dt.reps, dt.reps, dt.run] : [dt.reps, dt.reps, dt.run]; }
-function runIdx(){ return prof().squat ? 3 : 2; }
+function dqTimedTarget(tm){
+  const c=S.daily.count;
+  return Math.min(tm.cap, tm.base + Math.floor(c/tm.per));
+}
+function dqItems(){
+  const p=prof(), r=dqRepTarget();
+  const items=p.reps.map(n=>({n, unit:"reps", g:r}));
+  p.timed.forEach(tm=>items.push({n:tm.n, unit:"min", g:dqTimedTarget(tm), kind:tm.kind, dist:tm.dist&&dqTimedTarget(tm)>=tm.cap}));
+  return items;
+}
+function dailyGoals(){ return dqItems().map(i=>i.g); }
+function timedIdx(kind){
+  const p=prof();
+  for(let i=0;i<p.timed.length;i++) if(p.timed[i].kind===kind) return p.reps.length+i;
+  return -1;
+}
 function checkPenalty(){
   const t=todayStr();
   const y=new Date(); y.setDate(y.getDate()-1);
@@ -604,11 +740,21 @@ function checkPenalty(){
     save();
   }
 }
-function creditRun(m){
-  if(S.daily.lastComplete===todayStr()) return;
-  const g=dailyGoals();
-  S.daily.parts[runIdx()]=Math.min(g[runIdx()], S.daily.parts[runIdx()]+m); save();
+function penMin(){
+  const p=prof();
+  if(p.pen.mode==="dyn"){
+    const tm=p.timed.find(x=>x.kind==="run");
+    return (tm?dqTimedTarget(tm):15)+p.pen.extra;
+  }
+  return p.pen.min;
 }
+function creditTimed(kind,m){
+  if(S.daily.lastComplete===todayStr()) return;
+  const i=timedIdx(kind); if(i<0) return;
+  const g=dailyGoals();
+  S.daily.parts[i]=Math.min(g[i], S.daily.parts[i]+m); save();
+}
+function creditRun(m){ creditTimed("run",m); }
 function addDaily(i,n){
   if(S.daily.lastComplete===todayStr()) return;
   const goals=dailyGoals();
@@ -620,7 +766,7 @@ function addDaily(i,n){
 function completeDaily(){
   const goals=dailyGoals();
   if(!S.daily.parts.every((v,j)=>v>=goals[j])) return;
-  const t=todayStr(), dt=dailyTargets(), p=prof();
+  const t=todayStr(), items=dqItems(), p=prof();
   const kmEl=document.getElementById("dkm");
   if(kmEl){ const km=parseFloat(kmEl.value); if(km>0 && km>S.daily.bestKm) S.daily.bestKm=km; }
   const y=new Date(); y.setDate(y.getDate()-1);
@@ -636,8 +782,7 @@ function completeDaily(){
     streakMsg=`<div class="muted">Streak: ${S.streak} day${S.streak===1?"":"s"}</div>`;
   }
   const xp=50+Math.min(S.streak,25);
-  S.log.unshift({d:t, name:"DAILY QUEST", xp,
-    det:`${p.push} ${dt.reps} · ${p.sit} ${dt.reps}${p.squat?` · ${p.squat} ${dt.reps}`:""} · ${p.run} ${dt.run>=p.cap[1]&&p.dist?"30+ min":dt.run+" min"}`});
+  S.log.unshift({d:t, name:"DAILY QUEST", xp, det:items.map(i=>`${i.n} ${i.g}${i.unit==="min"?" min":""}`).join(" · ")});
   gainXp(xp); save(); pushLB();
   modal(`<h2>⚠ DAILY QUEST CLEAR</h2>
     <div class="big">+${xp} XP</div>
@@ -646,7 +791,7 @@ function completeDaily(){
   renderHeader();
 }
 function clearPenalty(){
-  modal(`<h2>⚠ SYSTEM</h2><div>Confirm: penalty ${prof().run.toLowerCase()} completed without stopping?</div>
+  modal(`<h2>⚠ SYSTEM</h2><div>Confirm: penalty ${prof().pen.label.toLowerCase()} completed without stopping?</div>
     <button class="btn" onclick="doClearPenalty()">CONFIRMED</button>
     <button class="btn ghost" onclick="closeModal()">NOT YET</button>`);
 }
@@ -655,6 +800,15 @@ function doClearPenalty(){
   S.log.unshift({d:todayStr(), name:"PENALTY QUEST", xp:20, det:"Penalty cleared. Streak unlocked."});
   gainXp(20); save(); closeModal(); go("quest");
 }
+function startDailyTimed(i){
+  const items=dqItems(), it=items[i];
+  const rem=Math.max(1, it.g - S.daily.parts[i]);
+  const lbl=it.n.toUpperCase();
+  const ph=[{l:lbl, s:rem*60, p:it.kind==="plank"?"walk":"run"}];
+  startTimer(ph,"daily");
+  TMR.di=i;
+}
+
 /* ---------- audio + timer ---------- */
 let ACTX=null, WL=null, TMR=null;
 function initAudio(){
@@ -755,21 +909,28 @@ function vTimer(){
 function stopTimer(){
   if(!TMR) return;
   clearInterval(TMR.int); unlockScreen();
-  const mode=TMR.mode, ranMin=Math.floor(tmrRanSec()/60);
+  const mode=TMR.mode, di=TMR.di;
+  const mins=Math.floor(Math.min(tmrElapsed(),TMR.total)/60);
   TMR=null;
-  if(mode==="daily" && ranMin>0){ creditRun(ranMin); }
+  if(mode==="daily" && mins>0 && di!=null && S.daily.lastComplete!==todayStr()){
+    const g=dailyGoals();
+    S.daily.parts[di]=Math.min(g[di],(S.daily.parts[di]||0)+mins); save();
+  }
   if(mode==="daily"){ go("quest"); } else { go("workout"); }
 }
 function finishTimer(){
   clearInterval(TMR.int); cue("done"); unlockScreen();
-  const mode=TMR.mode, ranMin=Math.max(1,Math.round(tmrRanSec()/60)), phs=TMR.phases;
+  const mode=TMR.mode, phs=TMR.phases, TMRdi=TMR.di;
+  const ranMin=Math.max(1,Math.round(Math.min(tmrElapsed(),TMR.total)/60));
   TMR=null;
   if(mode==="daily"){
-    creditRun(ranMin);
-    const g=dailyGoals();
+    const di=TMRdi; const g=dailyGoals();
+    if(di!=null && S.daily.lastComplete!==todayStr()){
+      S.daily.parts[di]=Math.min(g[di],(S.daily.parts[di]||0)+ranMin); save();
+    }
     const done = S.daily.parts.every((v,j)=>v>=g[j]);
     if(done && S.daily.lastComplete!==todayStr()){ completeDaily(); }
-    else modal(`<h2>⚠ SYSTEM</h2><div class="good">${prof().run} complete — ${ranMin} min credited.</div>
+    else modal(`<h2>⚠ SYSTEM</h2><div class="good">Segment complete — ${ranMin} min credited.</div>
       <button class="btn" onclick="closeModal();go('quest')">COMPLETE</button>`);
   } else if(mode==="rec"){
     if(S.session){
@@ -781,26 +942,22 @@ function finishTimer(){
     save(); go("workout");
   }
 }
-function startCardioTimer(){
-  const c=CARDIO[S.session.level-1];
-  const ph=[{l:"WARM-UP WALK",s:300,p:"walk"}];
-  for(let r=0;r<c.rounds;r++){
-    ph.push({l:"RUN",s:Math.round(c.run*60),p:"run"});
-    if(c.walk) ph.push({l:"WALK",s:Math.round(c.walk*60),p:"walk"});
-  }
-  ph.push({l:"COOL-DOWN WALK",s:300,p:"walk"});
-  startTimer(ph,"cardio");
-}
-function startDailyRun(){
-  const g=dailyGoals();
-  const rem=Math.max(1,g[runIdx()]-S.daily.parts[runIdx()]);
-  startTimer([{l:prof().run.toUpperCase(),s:rem*60,p:"run"}],"daily");
-}
-
 /* ---------- quest home ---------- */
+function poolState(){
+  const id=weekendId();
+  if(!S.wkPool||S.wkPool.id!==id){ S.wkPool={id,used:{}}; save(); }
+  return S.wkPool;
+}
 function vQuest(){
   checkPenalty();
   const t=todayStr(), p=prof();
+  const goalsNow=dailyGoals();
+  if(S.daily.todayD!==t){ S.daily.todayD=t; S.daily.parts=goalsNow.map(()=>0); save(); }
+  while(S.daily.parts.length<goalsNow.length) S.daily.parts.push(0);
+  if(S.daily.lastComplete!==t && S.daily.parts.some(v=>v>0) && S.daily.parts.every((v,j)=>v>=goalsNow[j])) completeDaily();
+  const items=dqItems();
+  const dailyDone=S.daily.lastComplete===t;
+
   if(isDeload() && S.deloadWk!==trainWeek()){
     S.deloadWk=trainWeek(); save();
     modal(`<h2>⚠ MANDATORY PROTOCOL</h2>
@@ -808,69 +965,52 @@ function vQuest(){
       <div style="text-align:left;font-size:12px;line-height:1.8;margin-top:10px">
       All prescribed weights are reduced <b class="gold">15%</b> this week and progression is paused.<br><br>
       <b>This is not optional and not a setback.</b> Strength is built when you recover, not when you lift.
-      After ~8 weeks of progressive loading, fatigue accumulates in tendons, joints and the nervous system
-      faster than muscle adapts — this is when lifters stall and get hurt. One planned light week discharges
-      that fatigue, and lifters reliably come back stronger the week after. Every serious program does this.<br><br>
-      <span class="muted">Lift the lighter weights crisply. Normal loads resume automatically next week.</span></div>
+      After ~8 weeks of loading, fatigue accumulates in tendons, joints and the nervous system —
+      one planned light week discharges it, and you come back stronger.<br><br>
+      <span class="muted">Lift the lighter weights crisply. Normal loads resume next week.</span></div>
       <button class="btn" onclick="closeModal()">UNDERSTOOD</button>`);
   }
-  if(S.daily.todayD!==t){ S.daily.todayD=t; S.daily.parts=[0,0,0,0]; save(); }
-  const goals=dailyGoals();
-  if(S.daily.lastComplete!==t && S.daily.parts.some(v=>v>0) && S.daily.parts.every((v,j)=>v>=goals[j])){ completeDaily(); }
-  const dt=dailyTargets();
-  const dailyDone=S.daily.lastComplete===t;
-  const maxRun=p.dist && dt.run>=p.cap[1];
-
   const deloadBanner = isDeload() ? `
     <div class="panel"><div class="pbody" style="text-align:center">
       <span style="font-size:11px;letter-spacing:3px;color:var(--gold)">⚠ DELOAD WEEK ${trainWeek()} — WEIGHTS −15% · PROGRESSION PAUSED</span>
     </div></div>` : "";
   const storeWarn = storageBlocked ? `
     <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:12px;letter-spacing:1px">
-      ⚠ THIS VIEWER BLOCKS SAVED DATA — progress will be lost when you close the app.<br>
-      <span class="muted">Try opening the file in a different app or browser.</span></div></div>` : "";
-
+      ⚠ THIS VIEWER BLOCKS SAVED DATA — progress will be lost when you close the app.</div></div>` : "";
   const decayHtml = S.decayNote ? `
-    <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:11px;letter-spacing:1px">
-      ⚠ ${S.decayNote}</div></div>` : "";
+    <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:11px;letter-spacing:1px">⚠ ${S.decayNote}</div></div>` : "";
   if(S.decayNote){ S.decayNote=null; save(); }
-
   const needBk = (S.lastBackup ? dayDiff(S.lastBackup,t)>=30 : (S.daily.count+S.quests)>=8)
               && (!S.bkSnooze || dayDiff(S.bkSnooze,t)>=7);
   const bkHtml = needBk ? `
     <div class="panel"><div class="pbody" style="text-align:center">
       <div style="font-size:11px;letter-spacing:2px;color:var(--gold)">⚠ SYSTEM DIRECTIVE — BACK UP YOUR DATA</div>
-      <div class="muted" style="font-size:10px;margin-top:6px">Your progress lives only on this device. Export a copy.</div>
       <button class="btn ghost" style="margin-top:10px" onclick="exportData();vQuest()">EXPORT NOW</button>
       <button class="btn ghost" onclick="S.bkSnooze=todayStr();save();vQuest()">REMIND ME LATER</button>
     </div></div>` : "";
-
   const penHtml = S.daily.penalty ? `
     <div class="panel red"><div class="ptitle"><div class="diamond"><span>!</span></div>PENALTY QUEST</div>
       <div class="pbody">
         <div class="qsub" style="color:var(--bad)">YOU FAILED TO COMPLETE THE DAILY QUEST</div>
-        <div class="goalrow"><span class="gname">${p.run} without stopping</span><span class="gval" style="color:var(--bad)">${dt.run+p.penExtra} min</span></div>
+        <div class="goalrow"><span class="gname">${p.pen.label} without stopping</span><span class="gval" style="color:var(--bad)">${penMin()} min</span></div>
         <div class="warn">STREAK LOCKED AT 0 UNTIL CLEARED</div>
         <button class="btn danger" onclick="clearPenalty()">PENALTY COMPLETE</button>
       </div></div>` : "";
 
-  const items=[[p.push,"reps"],[p.sit,"reps"]];
-  if(p.squat) items.push([p.squat,"reps"]);
-  items.push([maxRun?p.run+" — push distance":p.run,"min"]);
   let dailyBody;
   if(dailyDone){
     dailyBody=`<div class="clearbanner">✓ DAILY QUEST CLEARED</div>
-      <div class="muted" style="text-align:center;font-size:11px">Completed ${S.daily.count}× · next: ${dailyTargets().reps} reps / ${dailyTargets().run} min · resets at midnight</div>`;
+      <div class="muted" style="text-align:center;font-size:11px">Completed ${S.daily.count}× · resets at midnight</div>`;
   } else {
-    dailyBody = items.map(([n,unit],i)=>{
-      const v=S.daily.parts[i], g=goals[i], hit=v>=g;
+    dailyBody = items.map((it,i)=>{
+      const v=S.daily.parts[i]||0, g=it.g, hit=v>=g;
       return `
       <div class="setrow ${hit?'done':''}">
         <span class="setnum">${hit?"✓":i+1}</span>
         <div style="flex:1;min-width:0">
           <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px">
-            <span class="gname" style="flex:none">${n}</span>
-            <span class="gval">${v} / ${g} ${unit}</span>
+            <span class="gname" style="flex:none">${it.dist?it.n+" — push distance":it.n}</span>
+            <span class="gval">${v} / ${g} ${it.unit}</span>
           </div>
           <div class="abar" style="height:5px;margin-top:5px"><div class="afill" style="width:${Math.min(100,Math.round(v/g*100))}%"></div></div>
         </div>
@@ -879,13 +1019,14 @@ function vQuest(){
           <button onclick="addDaily(${i},1)">+1</button>
           <button onclick="addDaily(${i},5)">+5</button>
         </div>
-      </div>`;}).join("")
-      + (S.daily.parts[runIdx()]<goals[runIdx()] ? `<button class="btn ghost" style="font-size:11px" onclick="startDailyRun()">⏱ GUIDED ${p.run.toUpperCase()} — ${goals[runIdx()]-S.daily.parts[runIdx()]} MIN, BEEPS AT THE END</button>`:"")
-      + (maxRun?`<div class="wrow" style="margin-top:8px">
+      </div>
+      ${it.unit==="min"&&v<g?`<button class="btn ghost" style="font-size:11px" onclick="startDailyTimed(${i})">⏱ GUIDED ${it.n.toUpperCase()} — ${g-v} MIN, BEEPS AT THE END</button>`:""}`;
+    }).join("")
+      + (items.some(i=>i.dist)?`<div class="wrow" style="margin-top:8px">
           <span class="muted" style="font-size:11px">Distance (km, optional)</span>
           <input class="cin" type="number" inputmode="decimal" step="0.1" id="dkm" placeholder="${S.daily.bestKm||'km'}">
-        </div>${S.daily.bestKm?`<div class="muted" style="font-size:10px;margin-top:4px">Best: ${S.daily.bestKm} km</div>`:""}`:"")
-      + `<div class="muted" style="font-size:10px;text-align:center;margin-top:10px">Count as you go — clears itself when every target is hit · resets at midnight · cleared ${S.daily.count}×</div>`;
+        </div>`:"")
+      + `<div class="muted" style="font-size:10px;text-align:center;margin-top:10px">Count as you go — clears itself when every target is hit · cleared ${S.daily.count}×</div>`;
   }
   const dailyHtml=`
     <div class="panel dq">
@@ -893,62 +1034,121 @@ function vQuest(){
       <div class="ptitle"><div class="diamond"><span>!</span></div>DAILY QUEST — TRAINING</div>
       <div class="pbody">${dailyBody}</div></div>`;
 
-  const gi = gateForToday();
-  const doneToday = S.lastDone === t;
+  document.getElementById("view").innerHTML = storeWarn + deloadBanner + decayHtml + penHtml + dailyHtml
+    + gatePanel(t) + schedulePanel() + bkHtml;
+}
+
+/* ---------- gate panel + schedule ---------- */
+function gateLabel(pl){
+  if(pl.t==="lift") return LIFTS[pl.key].name;
+  if(pl.t==="cardio") return "ENDURANCE TRAINING";
+  if(pl.t==="runsimple") return pl.name||"RUN";
+  if(pl.t==="ph") return pl.name||"CUSTOM TRAINING";
+  if(pl.t==="stretch") return SGATES[pl.key].name;
+  if(pl.t==="pool") return "WEEKEND GATES";
+  return "REST";
+}
+function gateKind(pl){
+  if(pl.t==="lift") return "LIFT";
+  if(pl.t==="cardio"||pl.t==="runsimple") return "CARDIO";
+  if(pl.t==="ph") return "CUSTOM";
+  if(pl.t==="pool") return "RUN / STRETCH";
+  return pl.sch?"RECOVERY":"RECOVERY (optional)";
+}
+function gatePanel(t){
+  const gi=gateForToday();
+  const pl=planFor(gi);
+  const doneToday=S.lastDone===t;
   let inner;
   if(S.session){
-    inner = `<div class="qname">${DAYS[S.session.day].name}</div>
+    inner=`<div class="qname">${sessTitle()}</div>
       <div class="qsub">RAID IN PROGRESS</div>
       <button class="btn" onclick="go('workout')">RE-ENTER DUNGEON</button>
       <button class="btn ghost" onclick="abandonQuest()">ABANDON RAID</button>`;
+  } else if(pl.t==="pool"){
+    const ps=poolState();
+    const rows=POOL_GATES.map((g,i)=>{
+      const used=ps.used[i];
+      return `<div class="goalrow"><span class="gname">${g.lbl}</span>
+        <span class="gval">${used?"✓ CLEARED THIS WEEKEND":""}</span></div>`;
+    }).join("");
+    const btns=POOL_GATES.map((g,i)=> poolAvail(i)&&!doneToday ?
+      `<button class="btn" onclick="startPool(${i})">ENTER — ${g.lbl}</button>`:"").join("");
+    inner=`<div class="qname">WEEKEND GATES</div>
+      <div class="qsub">ONE RUN + ONE STRETCH · EITHER DAY · EACH ONCE PER WEEKEND</div>
+      ${rows}${doneToday?`<div class="warn">A GATE WAS ALREADY CLEARED TODAY — THE OTHER WAITS FOR TOMORROW</div>`:btns||`<div class="clearbanner">✓ WEEKEND COMPLETE</div>`}`;
   } else if(doneToday){
-    const bonusOk = gi<=4 && S.recBonusD!==t;
-    const bonusDone = gi<=4 && S.recBonusD===t;
-    inner = `<div class="qname">GATE CLEARED</div>
+    const bonusOk = BONK[bonusKeyFor(pl)] && S.recBonusD!==t;
+    const bonusDone = S.recBonusD===t;
+    inner=`<div class="qname">GATE CLEARED</div>
       <div class="qsub">RETURNS TOMORROW</div>
       ${bonusOk?`
         <div class="qsub" style="color:var(--gold);margin-top:10px">⚠ BONUS QUEST AVAILABLE</div>
-        ${RECBONUS[gi].map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join("")}
+        ${BONK[bonusKeyFor(pl)].map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join("")}
         <button class="btn" onclick="startRecBonus()">ENTER RECOVERY BONUS (~6 MIN)</button>`
       :bonusDone?`<div class="clearbanner">✓ RECOVERY BONUS CLEARED</div>`
       :`<div class="muted" style="text-align:center;font-size:11px">One dungeon per day. Recovery is part of the training.</div>`}`;
   } else {
-    const day=DAYS[gi];
-    const v=S.gateVar[gi]?1:0;
-    let goals2;
-    if(day.rec){
-      goals2 = gateRecList(gi).map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join("")
-        + (S.profile==="trainee"?`<div class="muted" style="font-size:10px;text-align:center;margin-top:8px">All seated or supported. Stretch to light tension, never pain. Keep a hand on something stable.</div>`:"");
-    } else if(day.cardio){
+    let goals2="", sub=gateKind(pl);
+    if(pl.t==="lift"){
+      const v=S.gateV[pl.key]?1:0;
+      goals2=exListK(pl.key,v).map(e=>{
+        const st=exSt(e.id);
+        const w = e.bw ? `bodyweight · ${e.lo}–${e.hi} reps`
+                : st.calibrated ? `${fw(isDeload()?deloadW(st.weight):st.weight)} × ${e.lo}–${e.hi}` : `CALIBRATE · ${e.lo}–${e.hi} reps`;
+        return `<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${e.sets} × ${w}</span></div>`;
+      }).join("");
+      sub=`STRENGTH GATE${LIFTS[pl.key].ab.length>1?" · WORKOUT "+(v?"B":"A"):""}`;
+    } else if(pl.t==="cardio"){
       const c=CARDIO[Math.min(S.cardioLvl,CARDIO.length)-1];
       const tot=Math.round((c.run+c.walk)*c.rounds);
-      goals2 = `<div class="goalrow"><span class="gname">Warm-up walk</span><span class="gval">5 min</span></div>
+      goals2=`<div class="goalrow"><span class="gname">Warm-up walk</span><span class="gval">5 min</span></div>
         <div class="goalrow"><span class="gname">${c.walk?`Run ${c.run} min / walk ${c.walk} min`:`Run continuously`}</span>
         <span class="gval">${c.walk?`× ${c.rounds}`:`${c.run} min`}</span></div>
         <div class="goalrow"><span class="gname">Cool-down walk</span><span class="gval">5 min</span></div>
-        <div class="goalrow"><span class="gname">Total</span><span class="gval">≈ ${tot+10} min</span></div>
-        <div class="muted" style="font-size:10px;text-align:center;margin-top:6px">Run minutes auto-credit today's daily quest.</div>`;
-    } else {
-      goals2 = exList(gi,v).map(e=>{
-        const st=exSt(e.id);
-        const w = st.calibrated ? `${fw(isDeload()?deloadW(st.weight):st.weight)} × ${e.lo}–${e.hi}` : `CALIBRATE · ${e.lo}–${e.hi} reps`;
-        return `<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${e.sets} × ${w}</span></div>`;
-      }).join("");
+        <div class="goalrow"><span class="gname">Total</span><span class="gval">≈ ${tot+10} min</span></div>`;
+      sub=`ENDURANCE GATE · LEVEL ${S.cardioLvl}`;
+    } else if(pl.t==="runsimple"){
+      goals2=`<div class="muted" style="text-align:center;font-size:11px;padding:8px 0">${pl.desc||""}</div>`;
+    } else if(pl.t==="ph"){
+      goals2=`<div class="muted" style="text-align:center;font-size:11px;padding:8px 0">${pl.desc||""}</div>`;
+    } else if(pl.t==="stretch"){
+      goals2=SGATES[planFor(gateForToday()).key]?SGATES[pl.key].ex.map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join(""):"";
+      sub=pl.sch?"RECOVERY GATE — SCHEDULED":"RECOVERY GATE — OPTIONAL · CLEAR IT IF YOU WANT THE DAILY GATE FEELING";
     }
-    inner = `<div class="qname">${day.name}</div>
-      <div class="qsub">${day.rec?"RECOVERY GATE — MOBILITY":day.cardio?`ENDURANCE GATE · LEVEL ${S.cardioLvl}`:`STRENGTH GATE · WORKOUT ${v?"B":"A"}`}</div>
+    inner=`<div class="qname">${gateLabel(pl)}</div>
+      <div class="qsub">${sub}</div>
       ${goals2}
-      ${day.cardio?`<div class="muted" style="font-size:10px;text-align:center;margin-top:8px">Zone 2 or VO2-max intervals of equal time also count.</div>`:""}
-      <button class="btn" onclick="startQuestAt(${gi})">ENTER DUNGEON</button>`;
+      <button class="btn" onclick="startGate()">ENTER DUNGEON</button>`;
   }
-  document.getElementById("view").innerHTML = storeWarn + deloadBanner + decayHtml + penHtml + dailyHtml + `
-    <div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>DUNGEON GATE</div>
-      <div class="pbody">${inner}</div></div>
-    <div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>WEEKLY SCHEDULE</div>
-      <div class="pbody">${DAYS.map((d,i)=>`<div class="goalrow">
-        <span class="gname" style="${i===gi?'color:#fff;text-shadow:0 0 8px var(--p)':''}">${i===gi?"▶ ":""}${DAYLBL[i]} — ${d.name}${(d.cardio||d.rec)?"":" ("+(S.gateVar[i]?"B":"A")+" next)"}</span>
-        <span class="gval">${d.rec?"RECOVERY":d.cardio?"CARDIO":"LIFT"}</span></div>`).join("")}
-        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Gates open only on their scheduled day. One raid per day.</div></div></div>` + bkHtml;
+  return `<div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>DUNGEON GATE</div>
+      <div class="pbody">${inner}</div></div>`;
+}
+function schedulePanel(){
+  const gi=gateForToday();
+  return `<div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>WEEKLY SCHEDULE</div>
+      <div class="pbody">${weekPlan().map((pl,i)=>`<div class="goalrow">
+        <span class="gname" style="${i===gi?'color:#fff;text-shadow:0 0 8px var(--p)':''}">${i===gi?"▶ ":""}${DAYLBL[i]} — ${gateLabel(planFor(i))}${pl.t==="lift"&&LIFTS[pl.key].ab.length>1?" ("+(S.gateV[pl.key]?"B":"A")+" next)":""}</span>
+        <span class="gval">${gateKind(pl)}</span></div>`).join("")}
+        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Gates open only on their day. One raid per day.</div></div></div>`;
+}
+function bonusKeyFor(pl){
+  if(pl.t==="lift") return pl.key;
+  if(pl.t==="cardio") return "cardio";
+  if(pl.t==="runsimple") return "runsimple";
+  if(pl.t==="ph") return "ph";
+  if(pl.t==="pool") return S.poolDone==="0"?"cardio":null;
+  return null;
+}
+function sessTitle(){
+  const s=S.session;
+  if(s.kind==="lift") return LIFTS[s.key].name+(LIFTS[s.key].ab.length>1?" — "+(s.v?"B":"A"):"");
+  if(s.kind==="cardio") return "ENDURANCE TRAINING";
+  if(s.kind==="runsimple") return s.name||"RUN";
+  if(s.kind==="ph") return s.name||"CUSTOM TRAINING";
+  if(s.kind==="rec") return SGATES[s.key].name;
+  if(s.kind==="rbonus") return "RECOVERY BONUS";
+  return "SESSION";
 }
 function abandonQuest(){
   modal(`<h2>⚠ WARNING</h2><div>Abandon the current quest?<br><span class="muted">Logged sets will be lost.</span></div>
@@ -956,53 +1156,71 @@ function abandonQuest(){
     <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
 }
 
-/* ---------- workout ---------- */
-function startQuestAt(i){
+/* ---------- starting gates ---------- */
+function poolAvail(i){ const ps=poolState(); return !ps.used[i]; }
+function startPool(i){
   if(S.session){ go("workout"); return; }
-  if(i!==gateForToday()){
-    modal(`<h2>⚠ SYSTEM</h2><div>This gate is sealed.<br><span class="muted">Gates open only on their scheduled day.</span></div><button class="btn" onclick="closeModal()">OK</button>`);
-    return;
-  }
+  if(S.lastDone===todayStr()) return;
+  if(!poolAvail(i)) return;
+  const g=POOL_GATES[i];
+  if(g.t==="cardio"){ S.session={kind:"cardio",level:Math.min(S.cardioLvl,CARDIO.length),pool:i}; }
+  else { S.session=mkRecSession(g.key,true); S.session.pool=i; }
+  save(); go("workout");
+}
+function mkRecSession(key,sched){
+  const entries={};
+  for(const e of SGATES[key].ex) entries[e.id]={sets:Array.from({length:recRows(e)},()=>({done:false}))};
+  return {kind:"rec",key,entries,sched:!!sched};
+}
+function startGate(){
+  if(S.session){ go("workout"); return; }
+  const gi=gateForToday(), pl=planFor(gi);
   if(S.lastDone===todayStr()){
     modal(`<h2>⚠ SYSTEM</h2><div>A gate was already cleared today.<br><span class="muted">One dungeon per day. It reopens tomorrow.</span></div><button class="btn" onclick="closeModal()">OK</button>`);
     return;
   }
-  const day=DAYS[i];
-  if(day.rec){
+  if(pl.t==="lift"){
+    const v=S.gateV[pl.key]?1:0;
     const entries={};
-    for(const e of gateRecList(i)) entries[e.id]={sets:Array.from({length:recRows(e)},()=>({done:false}))};
-    S.session={day:i, rec:true, entries};
-  } else if(day.cardio){
-    S.session={day:i, cardio:true, level:Math.min(S.cardioLvl,CARDIO.length)};
-  } else {
-    const v=S.gateVar[i]?1:0;
-    const entries={};
-    for(const e of exList(i,v)){
+    for(const e of exListK(pl.key,v)){
       const st=exSt(e.id);
-      const wq = st.calibrated ? (isDeload()? deloadW(st.weight) : st.weight) : 0;
-      entries[e.id]={cal:!st.calibrated,
-        sets:Array.from({length:e.sets},()=>({w:wq,r:st.calibrated?e.hi:0,done:false}))};
+      const wq = e.bw ? 0 : (st.calibrated ? (isDeload()? deloadW(st.weight):st.weight) : 0);
+      entries[e.id]={cal:!e.bw&&!st.calibrated,
+        sets:Array.from({length:e.sets},()=>({w:wq,r:(e.bw||st.calibrated)?e.hi:0,done:false}))};
     }
-    S.session={day:i, v, entries};
-  }
+    S.session={kind:"lift",key:pl.key,v,entries};
+  } else if(pl.t==="cardio"){
+    S.session={kind:"cardio",level:Math.min(S.cardioLvl,CARDIO.length)};
+  } else if(pl.t==="runsimple"){
+    S.session={kind:"runsimple",name:pl.name,desc:pl.desc};
+  } else if(pl.t==="ph"){
+    S.session={kind:"ph",name:pl.name,desc:pl.desc};
+  } else if(pl.t==="stretch"){
+    S.session=mkRecSession(pl.key,pl.sch);
+  } else return;
   save(); go("workout");
 }
 function startRecBonus(){
-  const gi=gateForToday();
   if(S.session){ go("workout"); return; }
-  if(gi===null || gi>4 || S.lastDone!==todayStr() || S.recBonusD===todayStr()) return;
+  const pl=planFor(gateForToday());
+  const bk=bonusKeyFor(pl);
+  if(!bk||!BONK[bk]||S.lastDone!==todayStr()||S.recBonusD===todayStr()) return;
   const entries={};
-  for(const e of RECBONUS[gi]) entries[e.id]={sets:Array.from({length:recRows(e)},()=>({done:false}))};
-  S.session={day:gi, rbonus:true, entries};
+  for(const e of BONK[bk]) entries[e.id]={sets:Array.from({length:recRows(e)},()=>({done:false}))};
+  S.session={kind:"rbonus",bk,entries};
   save(); go("workout");
 }
+
+/* ---------- workout views ---------- */
 function vWorkout(){
   if(!S.session){ go("quest"); return; }
-  const day=DAYS[S.session.day];
-  if(S.session.cardio){ vCardioSession(); return; }
-  if(S.session.rec||S.session.rbonus){ vRecSession(); return; }
-  const v=S.session.v?1:0;
-  const cards=exList(S.session.day,v).map(e=>{
+  const k=S.session.kind;
+  if(k==="cardio"){ vCardioSession(); return; }
+  if(k==="rec"||k==="rbonus"){ vRecSession(); return; }
+  if(k==="runsimple"||k==="ph"){ vSimpleGate(); return; }
+  const key=S.session.key, v=S.session.v?1:0;
+  const lst=exListK(key,v);
+  const cards=lst.map(e=>{
     const ent=S.session.entries[e.id];
     const rows=ent.sets.map((s,i)=> ent.cal ? `
       <div class="setrow ${s.done?'done':''}" >
@@ -1014,7 +1232,7 @@ function vWorkout(){
       </div>` : `
       <div class="setrow ${s.done?'done':''}">
         <span class="setnum">${i+1}</span>
-        <span class="wtag" onclick="editW('${e.id}',${i})">${fw(s.w)}<small> ✎</small></span>
+        <span class="wtag" onclick="editW('${e.id}',${i})">${e.bw?"body":fw(s.w)}<small> ${e.bw?"":"✎"}</small></span>
         <div class="repctl">
           <button onclick="adjR('${e.id}',${i},-1)">−</button>
           <span class="rv">${s.r}</span>
@@ -1025,42 +1243,73 @@ function vWorkout(){
     return `<div class="excard">
       <div class="exhead"><span class="exname">${e.name}</span>
         <span class="extag">${e.sets}×${e.lo}–${e.hi}${e.note?" · "+e.note:""}</span></div>
-      ${ent.cal?`<span class="caltag">⚠ CALIBRATION — ${e.assist?"log assist as negative (e.g. -40) or added weight":"find a weight you can lift "+e.lo+"–"+e.hi+" times"}, log every set</span>`:""}
+      ${ent.cal?`<span class="caltag">⚠ CALIBRATION — ${e.assist?"log assist as negative (e.g. -40)":"find a weight you can lift "+e.lo+"–"+e.hi+" times"}, log every set</span>`:""}
       ${rows}
     </div>`;
   }).join("");
   let wuHtml="";
-  const WARMUPS=[
-    ["Arm swings — 15 reps","Bent-over Y raises (no weight) — 12 reps"],
-    ["Bodyweight squats — 15 reps","Leg swings — 12 per side"],
-    ["Arm circles — 15 each way","Wall slides — 10 reps"],
-    null,
-    ["Push-ups — 10 reps","Horizontal arm crossovers — 15 reps"],
-  ];
-  const firstEx=exList(S.session.day,v)[0], st0=exSt(firstEx.id);
-  const dyn=WARMUPS[S.session.day];
-  if(dyn && st0.calibrated && st0.weight>0){
+  const dyn=WARMK[key];
+  const firstEx=lst.find(e=>!e.bw), st0=firstEx?exSt(firstEx.id):null;
+  if(dyn){
     if(!S.session.wu) S.session.wu=[false,false,false];
-    const W0=isDeload()? deloadW(st0.weight) : st0.weight;
-    const light=Math.max(5,Math.round(W0*0.6/5)*5);
-    const rows=[dyn[0],dyn[1],`${firstEx.name} — ${light} lb × 8 (light)`];
+    const rows=[dyn[0],dyn[1]];
+    if(st0&&st0.calibrated&&st0.weight>0){
+      const W0=isDeload()? deloadW(st0.weight):st0.weight;
+      rows.push(`${firstEx.name} — ${Math.max(5,Math.round(W0*0.6/5)*5)} lb × 8 (light)`);
+    }
     wuHtml=`<div class="excard" style="border-color:rgba(251,191,36,.5)">
-      <div class="exhead"><span class="exname" style="color:var(--gold)">WARM-UP</span><span class="extag">~2 min · no setup until the bar</span></div>
+      <div class="exhead"><span class="exname" style="color:var(--gold)">WARM-UP</span><span class="extag">~2 min</span></div>
       ${rows.map((n,i)=>`
       <div class="setrow ${S.session.wu[i]?'done':''}">
         <span class="setnum">${S.session.wu[i]?"✓":i+1}</span>
         <span class="gname" style="flex:1;font-size:13px">${n}</span>
         <button class="chk" onclick="togWu(${i})">✓</button>
       </div>`).join("")}
-      <div class="muted" style="font-size:9px;margin-top:4px">Primes the muscle group — not counted toward progression or volume.</div>
     </div>`;
   }
   document.getElementById("view").innerHTML=`
-    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${day.name} — ${v?"B":"A"}</div>
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${sessTitle()}</div>
       <div class="pbody">${wuHtml}${cards}
         <button class="btn" onclick="finishQuest()">CLEAR DUNGEON</button>
         <button class="btn ghost" onclick="go('quest')">◂ BACK (progress saved)</button>
       </div></div>`;
+}
+function vSimpleGate(){
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${sessTitle()}</div>
+      <div class="pbody">
+        <div class="muted" style="text-align:center;font-size:12px;padding:10px 0">${S.session.desc||""}</div>
+        <button class="btn" onclick="finishSimple()">CLEARED — IT IS DONE</button>
+        <button class="btn ghost" onclick="go('quest')">◂ BACK</button>
+      </div></div>`;
+}
+function finishSimple(){
+  const nm=sessTitle();
+  S.quests++;
+  completeCommon(nm, prof().workXP, nm+" completed", "");
+}
+
+function togWu(i){
+  if(!S.session.wu) S.session.wu=[false,false,false];
+  S.session.wu[i]=!S.session.wu[i];
+  if(S.session.wu[i] && !(S.session.wuc&&S.session.wuc[i])){
+    S.session.wuc=S.session.wuc||[false,false,false];
+    S.session.wuc[i]=true;
+    const p=prof(), dyn=WARMK[S.session.key]||[];
+    const label=(dyn[i]||"").toLowerCase();
+    p.reps.forEach((rn,ri)=>{
+      const r=rn.toLowerCase();
+      if((r.includes("push")&&label.includes("push"))){ addDailyCredit(ri,10); }
+      if((r.includes("squat")&&label.includes("squat"))){ addDailyCredit(ri,15); }
+      if((r.includes("bridge")&&label.includes("bridge"))){ addDailyCredit(ri,15); }
+    });
+  }
+  save(); vWorkout();
+}
+function addDailyCredit(idx,n){
+  if(S.daily.lastComplete===todayStr()) return;
+  const g=dailyGoals();
+  S.daily.parts[idx]=Math.min(g[idx], (S.daily.parts[idx]||0)+n); save();
 }
 function logCal(id,i){
   const e=exDef(id);
@@ -1070,54 +1319,39 @@ function logCal(id,i){
   if(!wOk||!(r>0)){ modal(`<h2>⚠ SYSTEM</h2><div>Enter the weight and reps you performed, then press LOG.${e&&e.assist?"<br><span class='muted'>Assisted: enter assist as a negative number.</span>":""}</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
   const s=S.session.entries[id].sets[i]; s.w=w; s.r=r; s.done=true; save(); vWorkout();
 }
-function addDailyCredit(idx,n){
-  if(S.daily.lastComplete===todayStr()) return;
-  const g=dailyGoals();
-  S.daily.parts[idx]=Math.min(g[idx], S.daily.parts[idx]+n);
-  save();
-}
-function togWu(i){
-  if(!S.session.wu) S.session.wu=[false,false,false];
-  S.session.wu[i]=!S.session.wu[i];
-  if(S.session.wu[i] && !(S.session.wuc&&S.session.wuc[i])){
-    S.session.wuc=S.session.wuc||[false,false,false];
-    S.session.wuc[i]=true;
-    const d=S.session.day;
-    if(d===4 && i===0) addDailyCredit(0,10);                 /* push-ups -> daily push-ups */
-    if(d===1 && i===0 && prof().squat) addDailyCredit(2,15); /* bw squats -> daily squats */
-  }
-  save(); vWorkout();
-}
 function togSet(id,i){ const s=S.session.entries[id].sets[i]; s.done=!s.done; save(); vWorkout(); }
-function adjR(id,i,d){ const s=S.session.entries[id].sets[i]; s.r=Math.max(0,Math.min(50,s.r+d)); s.done=true; save(); vWorkout(); }
+function adjR(id,i,d){ const s=S.session.entries[id].sets[i]; s.r=Math.max(0,Math.min(60,s.r+d)); s.done=true; save(); vWorkout(); }
 function editW(id,i){
+  const e=exDef(id); if(e&&e.bw) return;
   const s=S.session.entries[id].sets[i];
   const v=prompt("Weight for this set (lb, negative = assist):", s.w);
   if(v===null) return; const w=parseFloat(v);
   if(isFinite(w)){ s.w=w; save(); vWorkout(); }
 }
-
 function finishQuest(){
-  const day=DAYS[S.session.day];
-  const v=S.session.v?1:0;
+  const key=S.session.key, v=S.session.v?1:0;
+  const lst=exListK(key,v);
   let setsDone=0, setsTotal=0, ton=0, det=[], progNotes=[];
-  for(const e of exList(S.session.day,v)){
+  for(const e of lst){
     const ent=S.session.entries[e.id], st=exSt(e.id);
     const done=ent.sets.filter(s=>s.done);
     setsTotal+=e.sets; setsDone+=done.length;
     if(!done.length){ det.push(`${e.name}: skipped`); continue; }
     ton += done.reduce((a,s)=>a+Math.max(0,s.w)*s.r,0);
-    det.push(`${e.name}: `+done.map(s=>`${s.w}×${s.r}`).join(", "));
+    det.push(`${e.name}: `+done.map(s=>`${e.bw?"":s.w+"×"}${s.r}`).join(", "));
+    if(e.bw){
+      const minReps=Math.min(...done.map(s=>s.r));
+      if(done.length===e.sets && minReps>=e.hi) progNotes.push(`${e.name}: <b class="good">max reps — keep pushing</b>`);
+      else progNotes.push(`${e.name}: build toward ${e.hi} reps`);
+      st.calibrated=true;
+      continue;
+    }
     const bestSet=done.reduce((a,s)=>e1rm(s.w,s.r)>e1rm(a.w,a.r)?s:a);
     const best1=e1rm(bestSet.w,bestSet.r);
     if(bestSet.w>0 && best1>st.best) st.best=Math.round(best1);
     if(ent.cal){
-      if(e.assist){
-        st.weight=round5a(Math.max(...done.map(s=>s.w)));
-      } else {
-        st.weight=round5(best1*0.95/(1+e.hi/30));
-        st.base=Math.round(best1);
-      }
+      if(e.assist){ st.weight=round5a(Math.max(...done.map(s=>s.w))); }
+      else { st.weight=round5(best1*0.95/(1+e.hi/30)); st.base=Math.round(best1); }
       st.calibrated=true; st.fails=0;
       progNotes.push(`${e.name}: calibrated → <b class="good">${fw(st.weight)}</b>`);
     } else if(isDeload()){
@@ -1138,15 +1372,61 @@ function finishQuest(){
     }
   }
   if(!setsDone){ modal(`<h2>⚠ SYSTEM</h2><div>No sets logged. Complete at least one set.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
-  const allDone = setsDone===setsTotal;
-  const xp = 50 + setsDone*10 + (allDone?50:0);
+  if(LIFTS[key].ab.length>1) S.gateV[key]=S.gateV[key]?0:1;
   S.tonnage+=ton; S.quests++;
-  S.gateVar[S.session.day] = S.gateVar[S.session.day]?0:1;
-  completeCommon(`${day.name} — ${v?"B":"A"}`, xp, det.join("\n"),
+  completeCommon(sessTitle(), prof().workXP, det.join("\n"),
     `<div class="muted" style="text-align:left;font-size:12px;line-height:1.9">${progNotes.join("<br>")}</div>
      <div style="margin-top:10px">Volume moved: <b class="gold">${Math.round(ton).toLocaleString()} lb</b></div>`);
 }
 
+/* ---------- cardio / recovery sessions ---------- */
+function vCardioSession(){
+  if(TMR){ vTimer(); return; }
+  const lvl=S.session.level, c=CARDIO[lvl-1];
+  const tot=Math.round((c.run+c.walk)*c.rounds)+10;
+  const ivs = c.walk
+    ? `<div class="intv"><span>Warm-up walk</span><span class="gval">5 min</span></div>
+       <div class="intv"><span>RUN ${c.run} min → WALK ${c.walk} min</span><span class="gval">repeat × ${c.rounds}</span></div>
+       <div class="intv"><span>Cool-down walk</span><span class="gval">5 min</span></div>`
+    : `<div class="intv"><span>Warm-up walk</span><span class="gval">5 min</span></div>
+       <div class="intv"><span>RUN — continuous</span><span class="gval">${c.run} min</span></div>
+       <div class="intv"><span>Cool-down walk</span><span class="gval">5 min</span></div>`;
+  document.getElementById("view").innerHTML=`
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>ENDURANCE — LEVEL ${lvl}</div>
+      <div class="pbody">
+        <div class="cbig">≈ ${tot} MIN</div>
+        ${ivs}
+        ${S.session.timerDone?`<div class="clearbanner">✓ GUIDED SESSION FINISHED — REPORT RESULT</div>`:`
+        <button class="btn" onclick="startCardioTimer()">▶ START GUIDED TIMER (BEEPS)</button>
+        <div class="muted" style="font-size:10px;text-align:center;margin-top:8px">Keep the screen on. Or do it manually and report below.</div>`}
+        <button class="btn ${S.session.timerDone?"":"ghost"}" onclick="finishCardio(true)">CLEARED — IT WAS MANAGEABLE</button>
+        <button class="btn ghost" onclick="finishCardio(false)">CLEARED — BARELY SURVIVED</button>
+        <button class="btn ghost" onclick="go('quest')">◂ BACK</button>
+      </div></div>`;
+}
+function startCardioTimer(){
+  const c=CARDIO[S.session.level-1];
+  const ph=[{l:"WARM-UP WALK",s:300,p:"walk"}];
+  for(let r=0;r<c.rounds;r++){
+    ph.push({l:"RUN",s:Math.round(c.run*60),p:"run"});
+    if(c.walk) ph.push({l:"WALK",s:Math.round(c.walk*60),p:"walk"});
+  }
+  ph.push({l:"COOL-DOWN WALK",s:300,p:"walk"});
+  startTimer(ph,"cardio");
+}
+function finishCardio(advance){
+  const lvl=S.session.level, c=CARDIO[lvl-1], wasPool=S.session.pool;
+  let note;
+  if(advance && S.cardioLvl<CARDIO.length){ S.cardioLvl++; note=`Endurance level up → <b class="good">LEVEL ${S.cardioLvl}</b>`; }
+  else if(advance){ note=`<b class="good">Max program level.</b> Go further or faster.`; }
+  else note=`Level held at ${lvl}. Clear it again to advance.`;
+  S.cardioDone++;
+  creditRun(Math.round(c.run*c.rounds));
+  if(wasPool!==undefined){ poolState().used[wasPool]=true; save(); }
+  completeCommon("ENDURANCE TRAINING", prof().workXP, `Run/walk level ${lvl} completed`, `<div class="muted">${note}</div>`);
+}
+function recList(sess){ return sess.kind==="rbonus" ? BONK[sess.bk] : SGATES[sess.key].ex; }
+function recTitle(sess){ return sess.kind==="rbonus" ? "RECOVERY BONUS" : SGATES[sess.key].name; }
 function vRecSession(){
   if(TMR){ vTimer(); return; }
   const lst=recList(S.session);
@@ -1166,8 +1446,8 @@ function vRecSession(){
   document.getElementById("view").innerHTML=`
     <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${recTitle(S.session)}</div>
       <div class="pbody">
-        <button class="btn" onclick="startRecTimer()">${(()=>{const l=recList(S.session);let d=0,t=0;for(const e of l){t+=recRows(e);d+=S.session.entries[e.id].sets.filter(s=>s.done).length;}return d>0&&d<t?`▶ RESUME GUIDED — ${t-d} LEFT`:"▶ GUIDED STRETCH (BEEPS)";})()}</button>
-        <div class="muted" style="font-size:10px;text-align:center;margin:8px 0">1 long beep = start · 2 short = switch · finish = triple + high tone.<br>Targets grow every clear.</div>
+        <button class="btn" onclick="startRecTimer()">${(()=>{const l=recList(S.session);let d=0,t2=0;for(const e of l){t2+=recRows(e);d+=S.session.entries[e.id].sets.filter(s=>s.done).length;}return d>0&&d<t2?`▶ RESUME GUIDED — ${t2-d} LEFT`:"▶ GUIDED STRETCH (BEEPS)";})()}</button>
+        <div class="muted" style="font-size:10px;text-align:center;margin:8px 0">1 long beep = start · 2 short = switch · finish = triple + high tone.<br>Targets grow every clear.${S.profile==="eileen"||S.profile==="allison"?"<br>All seated or supported. Stretch to light tension, never pain.":""}</div>
         ${cards}
         <button class="btn" onclick="finishRec()">CLEAR DUNGEON</button>
         <button class="btn ghost" onclick="go('quest')">◂ BACK (progress saved)</button>
@@ -1180,7 +1460,7 @@ function startRecTimer(){
   lst.forEach((e)=>{
     const rows=recRows(e);
     for(let h=0;h<rows;h++){
-      if(S.session.entries[e.id].sets[h].done) continue; /* resume: skip finished holds */
+      if(S.session.entries[e.id].sets[h].done) continue;
       const secs = e.mode==="reps" ? Math.max(30, recVal(e)*4) : recVal(e);
       const lbl = e.name.toUpperCase()
         + (e.per?(h===0?" — LEFT":" — RIGHT"):"")
@@ -1194,7 +1474,7 @@ function startRecTimer(){
   startTimer(ph,"rec");
 }
 function finishRec(){
-  const sess=S.session, lst=recList(sess), bonus=!!sess.rbonus;
+  const sess=S.session, lst=recList(sess), bonus=sess.kind==="rbonus";
   let done=0, total=0, det=[];
   for(const e of lst){
     const d=sess.entries[e.id].sets.filter(s=>s.done).length;
@@ -1204,47 +1484,21 @@ function finishRec(){
   }
   if(!done){ modal(`<h2>⚠ SYSTEM</h2><div>Nothing logged. Complete at least one stretch.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
   const all=done===total;
-  const xp=(bonus?10:20)+(all?5:0); /* deliberately tiny: recovery must not drive rank */
+  const xp=(bonus?10:20)+(all?5:0);
   S.recDone++;
-  if(bonus) S.recBonusD=todayStr();
-  completeCommon(recTitle(sess), xp, det.join("\n"),
-    `<div class="muted">Flexibility is armor. Targets increase next visit.</div>`);
-}
-function vCardioSession(){
-  if(TMR){ vTimer(); return; }
-  const lvl=S.session.level, c=CARDIO[lvl-1];
-  const tot=Math.round((c.run+c.walk)*c.rounds)+10;
-  const ivs = c.walk
-    ? `<div class="intv"><span>Warm-up walk</span><span class="gval">5 min</span></div>
-       <div class="intv"><span>RUN ${c.run} min → WALK ${c.walk} min</span><span class="gval">repeat × ${c.rounds}</span></div>
-       <div class="intv"><span>Cool-down walk</span><span class="gval">5 min</span></div>`
-    : `<div class="intv"><span>Warm-up walk</span><span class="gval">5 min</span></div>
-       <div class="intv"><span>RUN — continuous</span><span class="gval">${c.run} min</span></div>
-       <div class="intv"><span>Cool-down walk</span><span class="gval">5 min</span></div>`;
-  document.getElementById("view").innerHTML=`
-    <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>ENDURANCE — LEVEL ${lvl}</div>
-      <div class="pbody">
-        <div class="cbig">≈ ${tot} MIN</div>
-        ${ivs}
-        ${S.session.timerDone?`<div class="clearbanner">✓ GUIDED SESSION FINISHED — REPORT RESULT</div>`:`
-        <button class="btn" onclick="startCardioTimer()">▶ START GUIDED TIMER (BEEPS)</button>
-        <div class="muted" style="font-size:10px;text-align:center;margin-top:8px">Keep the screen on while it runs. Or do it manually and report below.</div>`}
-        <button class="btn ${S.session.timerDone?"":"ghost"}" onclick="finishCardio(true)">CLEARED — IT WAS MANAGEABLE</button>
-        <button class="btn ghost" onclick="finishCardio(false)">CLEARED — BARELY SURVIVED</button>
-        <button class="btn ghost" onclick="go('quest')">◂ BACK</button>
-      </div></div>`;
-}
-function finishCardio(advance){
-  const lvl=S.session.level, c=CARDIO[lvl-1];
-  let note;
-  if(advance && S.cardioLvl<CARDIO.length){ S.cardioLvl++; note=`Endurance level up → <b class="good">LEVEL ${S.cardioLvl}</b>`; }
-  else if(advance){ note=`<b class="good">Max program level.</b> Keep running 30+ min — go further or faster.`; }
-  else note=`Level held at ${lvl}. Clear it again to advance.`;
-  S.cardioDone++;
-  const ranMin=Math.round(c.run*c.rounds);
-  creditRun(ranMin);
-  completeCommon("ENDURANCE TRAINING", advance?150:120, `Run/walk level ${lvl} completed`,
-    `<div class="muted">${note}<br>${ranMin} run minutes credited to today's daily quest.</div>`);
+  if(bonus){ S.recBonusD=todayStr(); }
+  if(sess.pool!==undefined){ poolState().used[sess.pool]=true; save(); }
+  if(bonus){
+    S.log.unshift({d:todayStr(), name:"RECOVERY BONUS", xp, det:det.join("\n")});
+    S.session=null; gainXp(xp); save();
+    modal(`<h2>⚠ BONUS CLEAR</h2><div class="big">+${xp} XP</div>
+      <div class="muted">Flexibility is armor.</div>
+      <button class="btn" onclick="finishClear()">COMPLETE</button>`);
+    renderHeader();
+  } else {
+    completeCommon(recTitle(sess), xp, det.join("\n"),
+      `<div class="muted">Flexibility is armor. Targets increase next visit.</div>`);
+  }
 }
 
 function completeCommon(name, xp, detail, extraHtml){
@@ -1440,7 +1694,8 @@ function importData(){
     const d=JSON.parse(document.getElementById("imp").value);
     if(typeof d.level!=="number") throw 0;
     S=Object.assign(defaultState(),d);
-    if(!Array.isArray(S.gateVar)) S.gateVar=[0,0,0,0,0];
+    if(!S.gateV) S.gateV={};
+    if(Array.isArray(S.gateVar)){ S.gateV.hBack=S.gateVar[0]||0; S.gateV.hLegs=S.gateVar[1]||0; S.gateV.hSho=S.gateVar[2]||0; S.gateV.hChest=S.gateVar[4]||0; delete S.gateVar; }
     save();
     modal(`<h2>⚠ SYSTEM</h2><div class="good">Data restored.</div><button class="btn" onclick="closeModal();go('quest')">OK</button>`);
     renderHeader();
