@@ -263,11 +263,11 @@ function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
 
 /* ---------- stretch pool (structure per Movement by David: active mobility + holds, 2 sets) ---------- */
 const STRETCH={
- relph:  {id:"relph",  name:"Elephant Walks",          mode:"reps", sets:2, reps:8,  cap:16, tip:"Hands to floor, alternate straightening each knee."},
+ relph:  {id:"relph",  name:"Elephant Walks",          mode:"reps", sets:2, reps:8,  cap:16, alt:true, tip:"Hands to floor, alternate straightening each knee."},
  rsplit: {id:"rsplit", name:"Deep Split Squat",        mode:"reps", sets:2, reps:6,  cap:12, per:"per side", tip:"Long lunge, back knee hovers, sink deep each rep."},
  rpan:   {id:"rpan",   name:"Pancake Stretch",         holds:2, sec:30, cap:60, tip:"Legs wide, fold forward with a flat back."},
  rpigeon:{id:"rpigeon",name:"Pigeon Pose",             holds:2, sec:25, cap:45, per:"per side", tip:"Front shin angled, hips square, fold forward."},
- r9090:  {id:"r9090",  name:"90/90 Hip Switch Hold",   holds:2, sec:30, cap:60, per:"per side", tip:"Sit tall, chest toward front shin."},
+ r9090:  {id:"r9090",  name:"90/90 Hip Hold",   holds:2, sec:30, cap:60, per:"per side", tip:"Sit tall, chest toward front shin."},
  rsquat: {id:"rsquat", name:"Deep Squat Hold",         holds:2, sec:30, cap:60, tip:"Heels down, knees pushed out with elbows."},
  rcouch: {id:"rcouch", name:"Couch Stretch",           holds:2, sec:25, cap:45, per:"per side", tip:"Rear foot on wall, squeeze glute, ribs down."},
  rfold:  {id:"rfold",  name:"Standing Forward Fold",   holds:2, sec:20, cap:40, tip:"Soft knees, let the spine hang."},
@@ -275,8 +275,8 @@ const STRETCH={
  rpray:  {id:"rpray",  name:"Forearm Prayer Stretch",  holds:2, sec:20, cap:35, tip:"Palms together, lower hands until forearms bite."},
  rpec:   {id:"rpec",   name:"Doorway Pec Stretch",     holds:2, sec:25, cap:45, per:"per side", tip:"Elbow at 90°, step through the door."},
  rlat:   {id:"rlat",   name:"Overhead Lat Reach",      holds:2, sec:25, cap:45, per:"per side", tip:"Grab a frame overhead, sink hips away."},
- rthor:  {id:"rthor",  name:"Thoracic Rotation Hold",  holds:2, sec:20, cap:40, per:"per side", tip:"On all fours, hand behind head, open to ceiling."},
- rankle: {id:"rankle", name:"Ankle Dorsiflexion",      holds:2, sec:25, cap:45, per:"per side", tip:"Knee drives over toes, heel stays down."},
+ rthor:  {id:"rthor",  name:"Thoracic Rotations (open-book)", mode:"reps", sets:2, reps:8, cap:12, per:"per side", tip:"On all fours, hand behind head — rotate open, return, repeat."},
+ rankle: {id:"rankle", name:"Ankle Rocks (knee to wall)", mode:"reps", sets:2, reps:10, cap:15, per:"per side", tip:"Rock the knee over the toes and back, heel down."},
  rxbody: {id:"rxbody", name:"Cross-Body Shoulder",     holds:2, sec:25, cap:45, per:"per side", tip:"Pull the arm across, shoulder stays down."},
  rtri:   {id:"rtri",   name:"Overhead Triceps Stretch",holds:2, sec:25, cap:45, per:"per side", tip:"Elbow to the sky, hand down the spine."},
  rbi:    {id:"rbi",    name:"Wall Biceps Stretch",     holds:2, sec:25, cap:45, per:"per side", tip:"Palm on wall behind you, turn away slowly."},
@@ -289,7 +289,7 @@ const TSAT=[
  {id:"tfig4",  name:"Seated Figure-4",          holds:2, sec:20, cap:30, per:"per side", tip:"Ankle over opposite knee, lean forward slightly."},
  {id:"tham",   name:"Seated Hamstring Reach",   holds:2, sec:20, cap:30, per:"per side", tip:"Heel out on floor, hinge forward until a light pull."},
  {id:"tcalf",  name:"Supported Calf Stretch",   holds:2, sec:20, cap:30, per:"per side", tip:"Hands on chair back, step one foot back, heel down."},
- {id:"tankle", name:"Seated Ankle Circles",     mode:"reps", sets:2, reps:8, cap:12, tip:"Slow circles each direction, seated."},
+ {id:"tankle", name:"Seated Ankle Circles",     mode:"reps", sets:2, reps:8, cap:12, per:"per side", tip:"Circles each direction — set 1 left ankle, set 2 right."},
 ];
 const TSUN=[
  {id:"twall",  name:"Wall Pec Stretch",         holds:2, sec:20, cap:30, per:"per side", tip:"Palm on wall, turn away until a gentle chest stretch."},
@@ -304,7 +304,7 @@ const RSAT=[
  W("rsplit",{sets:2,reps:10,cap:14}),
  W("rpan",{holds:3,sec:50,cap:75}),
  W("rpigeon",{holds:2,sec:60,cap:90}),
- W("r9090",{holds:2,sec:60,cap:90}),
+ W("r9090",{holds:2,sec:60,cap:90,tip:"Both legs at 90° — LEFT/RIGHT = which leg leads in front."}),
  W("rsquat",{holds:3,sec:50,cap:75}),
  W("rcouch",{holds:2,sec:50,cap:75}),
  W("rfold",{holds:3,sec:40,cap:60}),
@@ -314,8 +314,8 @@ const RSUN=[
  W("rpray",{holds:3,sec:40,cap:60}),
  W("rpec",{holds:2,sec:60,cap:85}),
  W("rlat",{holds:2,sec:60,cap:85}),
- W("rthor",{holds:2,sec:55,cap:75}),
- W("rankle",{holds:2,sec:55,cap:75}),
+ W("rthor",{sets:2,reps:10,cap:14}),
+ W("rankle",{sets:2,reps:12,cap:16}),
  W("rxbody",{holds:2,sec:55,cap:75}),
  W("rtri",{holds:2,sec:55,cap:75}),
  W("rneck",{holds:2,sec:40,cap:60}),
@@ -334,13 +334,13 @@ const DAYS=[
  {name:"BACK & BICEPS", ab:[
   [{id:"latpull", name:"Lat Pulldown",             sets:4, lo:8,  hi:12, inc:5},
    {id:"row",     name:"Seated Cable Row",         sets:3, lo:8,  hi:12, inc:5},
-   {id:"dbrow",   name:"One-Arm Dumbbell Row",     sets:3, lo:10, hi:12, inc:5,  note:"per arm"},
+   {id:"dbrow",   name:"One-Arm Dumbbell Row",     sets:3, lo:10, hi:12, inc:5,  note:"all reps per arm, one side at a time"},
    {id:"bbcurl",  name:"Barbell Curl",             sets:3, lo:8,  hi:12, inc:5},
-   {id:"hcurl",   name:"Hammer Curl",              sets:3, lo:10, hi:15, inc:5,  note:"per dumbbell"}],
+   {id:"hcurl",   name:"Hammer Curl",              sets:3, lo:10, hi:15, inc:5,  note:"weight = each dumbbell"}],
   [{id:"bbrow",   name:"Barbell Row",              sets:4, lo:8,  hi:12, inc:5},
    {id:"ngpull",  name:"Neutral-Grip Pulldown",    sets:3, lo:8,  hi:12, inc:5},
    {id:"csrow",   name:"Chest-Supported Row",      sets:3, lo:10, hi:12, inc:5},
-   {id:"incurl",  name:"Incline DB Curl",          sets:3, lo:10, hi:15, inc:5,  note:"per dumbbell"},
+   {id:"incurl",  name:"Incline DB Curl",          sets:3, lo:10, hi:15, inc:5,  note:"weight = each dumbbell"},
    {id:"ccurl",   name:"Cable Curl",               sets:3, lo:10, hi:15, inc:5}]
  ]},
  {name:"LEGS", ab:[
@@ -350,19 +350,19 @@ const DAYS=[
    {id:"legcurl", name:"Lying Leg Curl",           sets:3, lo:10, hi:15, inc:5},
    {id:"calf",    name:"Standing Calf Raise",      sets:4, lo:12, hi:20, inc:10}],
   [{id:"hack",    name:"Hack Squat",               sets:4, lo:8,  hi:12, inc:10},
-   {id:"bss",     name:"Bulgarian Split Squat",    sets:3, lo:10, hi:12, inc:5,  note:"per leg, DBs"},
+   {id:"bss",     name:"Bulgarian Split Squat",    sets:3, lo:10, hi:12, inc:5,  note:"all reps per leg · dumbbells in hands"},
    {id:"hthrust", name:"Hip Thrust",               sets:3, lo:10, hi:15, inc:10},
    {id:"legext",  name:"Leg Extension",            sets:3, lo:12, hi:15, inc:5},
    {id:"scalf",   name:"Seated Calf Raise",        sets:4, lo:12, hi:20, inc:5}]
  ]},
  {name:"SHOULDERS & ARMS", ab:[
-  [{id:"ohp",     name:"Seated DB Shoulder Press", sets:4, lo:8,  hi:12, inc:5,  note:"per dumbbell"},
-   {id:"latraise",name:"Lateral Raise",            sets:4, lo:12, hi:20, inc:5,  note:"per dumbbell"},
+  [{id:"ohp",     name:"Seated DB Shoulder Press", sets:4, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
+   {id:"latraise",name:"Lateral Raise",            sets:4, lo:12, hi:20, inc:5,  note:"weight = each dumbbell"},
    {id:"facepull",name:"Face Pull",                sets:3, lo:12, hi:15, inc:5},
    {id:"ezcurl",  name:"EZ-Bar Curl",              sets:3, lo:8,  hi:12, inc:5},
    {id:"skull",   name:"Skull Crusher",            sets:3, lo:8,  hi:12, inc:5}],
   [{id:"bohp",    name:"Barbell Overhead Press",   sets:4, lo:6,  hi:10, inc:5},
-   {id:"clat",    name:"Cable Lateral Raise",      sets:4, lo:12, hi:20, inc:5,  note:"per arm"},
+   {id:"clat",    name:"Cable Lateral Raise",      sets:4, lo:12, hi:20, inc:5,  note:"all reps per arm, one side at a time"},
    {id:"rpd",     name:"Reverse Pec Deck",         sets:3, lo:12, hi:15, inc:5},
    {id:"pcurl",   name:"Preacher Curl",            sets:3, lo:10, hi:12, inc:5},
    {id:"dips",    name:"Dips",                     sets:3, lo:6,  hi:10, inc:5,  assist:true, note:"assist = negative lb"}]
@@ -370,7 +370,7 @@ const DAYS=[
  {name:"ENDURANCE TRAINING", cardio:true},
  {name:"CHEST & TRICEPS", ab:[
   [{id:"bench",   name:"Barbell Bench Press",      sets:4, lo:6,  hi:10, inc:5},
-   {id:"incdb",   name:"Incline Dumbbell Press",   sets:3, lo:8,  hi:12, inc:5,  note:"per dumbbell"},
+   {id:"incdb",   name:"Incline Dumbbell Press",   sets:3, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell"},
    {id:"fly",     name:"Cable Fly",                sets:3, lo:12, hi:15, inc:5},
    {id:"pushdn",  name:"Triceps Rope Pushdown",    sets:3, lo:10, hi:15, inc:5},
    {id:"ohext",   name:"Overhead Cable Extension", sets:3, lo:10, hi:15, inc:5}],
@@ -378,7 +378,7 @@ const DAYS=[
    {id:"mcp",     name:"Machine Chest Press",      sets:3, lo:8,  hi:12, inc:5},
    {id:"pecdeck", name:"Pec Deck",                 sets:3, lo:12, hi:15, inc:5},
    {id:"cgb",     name:"Close-Grip Bench Press",   sets:3, lo:8,  hi:12, inc:5},
-   {id:"sapd",    name:"Single-Arm Pushdown",      sets:3, lo:10, hi:15, inc:5,  note:"per arm"}]
+   {id:"sapd",    name:"Single-Arm Pushdown",      sets:3, lo:10, hi:15, inc:5,  note:"all reps per arm, one side at a time"}]
  ]},
  {name:"RECOVERY — HIPS & LOWER", rec:true, ex:RSAT},
  {name:"RECOVERY — UPPER & CLIMB PREP", rec:true, ex:RSUN},
@@ -441,12 +441,72 @@ for(const id in S.ex){ const st=S.ex[id]; if(st.calibrated && !st.base) st.base=
 if(typeof S.recDone!=="number") S.recDone=0;
 if(!S.trainStart) S.trainStart = (S.log&&S.log.length) ? S.log[S.log.length-1].d : todayStr();
 if(S.deloadWk===undefined) S.deloadWk=null;
+/* ---------- leaderboard (Firestore REST) ---------- */
+const FB={key:"AIzaSyAFj7fhdL4qDNss1yACo6IukBhpfQPvp4Y",project:"the-system-ac6d5"};
+const FBURL="https://firestore.googleapis.com/v1/projects/"+FB.project+"/databases/(default)/documents/leaderboard";
+if(S.lbOpt===undefined) S.lbOpt=false;
+if(!S.lbId) S.lbId="h"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+if(S.lbCache===undefined) S.lbCache=null;
+let lbLast=0;
+function pushLB(){
+  if(!S.lbOpt) return;
+  if(typeof navigator!=="undefined" && navigator.onLine===false) return;
+  const now=Date.now(); if(now-lbLast<60000) return; lbLast=now;
+  try{
+    fetch(FBURL+"/"+S.lbId+"?key="+FB.key,{method:"PATCH",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({fields:{
+        name:{stringValue:(S.name||"HUNTER").slice(0,14)},
+        level:{integerValue:String(S.level)},
+        rank:{stringValue:rankOf(S.level)},
+        streak:{integerValue:String(S.streak)},
+        updated:{stringValue:todayStr()}
+      }})}).catch(function(){});
+  }catch(e){}
+}
+function fetchLB(cb){
+  const fallback=function(){ cb(S.lbCache?S.lbCache.rows:null,false); };
+  try{
+    fetch(FBURL+"?pageSize=200&key="+FB.key).then(function(r){return r.json();}).then(function(j){
+      const rows=(j.documents||[]).map(function(d){
+        const f=d.fields||{};
+        return {name:(f.name&&f.name.stringValue)||"?",
+                level:parseInt((f.level&&f.level.integerValue)||0,10),
+                rank:(f.rank&&f.rank.stringValue)||"E",
+                streak:parseInt((f.streak&&f.streak.integerValue)||0,10),
+                updated:(f.updated&&f.updated.stringValue)||"",
+                me:d.name.split("/").pop()===S.lbId};
+      }).sort(function(a,b){return (b.updated>a.updated?1:b.updated<a.updated?-1:0)||b.streak-a.streak;});
+      S.lbCache={t:todayStr(),rows:rows}; save();
+      cb(rows,true);
+    }).catch(fallback);
+  }catch(e){ fallback(); }
+}
+function lbRows(rows,live){
+  if(!rows||!rows.length) return `<div class="muted">${S.lbOpt?"The guild hall is empty — members appear when they sync online.":"Join the guild from the SYSTEM tab to appear here."}</div>`;
+  const t=todayStr();
+  return `<div class="muted" style="font-size:10px;text-align:center;margin-bottom:8px">Everyone leveling, together. No rankings — just the guild.</div>`
+   + rows.map(r=>`<div class="goalrow" style="${r.me?'color:#fff;text-shadow:0 0 8px var(--p)':''}">
+    <span class="gname">${r.updated===t?'<span style="color:var(--good)">●</span> ':''}${String(r.name).replace(/[<>&]/g,"")}${r.me?" ◂ YOU":""}</span>
+    <span class="gval">LV ${r.level} · ${r.rank} · ⚔ ${r.streak}</span></div>`).join("")
+   + `<div class="muted" style="font-size:9px;margin-top:6px;text-align:center">● = active today · ${live?"LIVE":"offline — last known"+(S.lbCache&&S.lbCache.t?" · "+S.lbCache.t:"")}</div>`;
+}
 if(!S.recN) S.recN={};
 if(S.recBonusD===undefined) S.recBonusD=null;
 function recVal(e){ const n=S.recN[e.id]||0;
   return e.mode==="reps" ? Math.min(e.cap, e.reps + n) : Math.min(e.cap, e.sec + 2*n); }
 function recRows(e){ return e.holds||e.sets; }
 function recLbl(e){ return e.mode==="reps" ? recVal(e)+" reps" : recVal(e)+"s"; }
+function sideTxt(e){ /* full wording for session cards */
+  const n=recRows(e), v=recLbl(e);
+  if(e.mode==="reps"){
+    if(e.alt) return `${n} sets × ${v} total — alternate legs each rep`;
+    return e.per ? `${n} sets × ${v} — set 1 left, set 2 right` : `${n} sets × ${v}`;
+  }
+  return e.per ? `${n} holds × ${v} — one per side` : `${n} holds × ${v} — both sides at once`;
+}
+function sideShort(e){ /* compact for previews */
+  return `${recRows(e)} × ${recLbl(e)}${e.alt?" · alt.":e.per?" · L/R":(e.mode==="reps"?"":" · both")}`;
+}
 function gateRecList(i){ return S.profile==="trainee" ? (i===5?TSAT:TSUN) : DAYS[i].ex; }
 function recList(sess){ return sess.rbonus ? RECBONUS[sess.day] : gateRecList(sess.day); }
 function recTitle(sess){ return sess.rbonus ? "RECOVERY BONUS — "+DAYS[sess.day].name : DAYS[sess.day].name; }
@@ -516,7 +576,7 @@ function pickProf(k){ const el=document.getElementById("nmIn"); nmTmp=el?el.valu
 function saveName(){
   const el=document.getElementById("nmIn");
   const v=(el&&el.value||"").trim().toUpperCase();
-  S.name=v||S.name||"HUNTER"; nmTmp=null; save(); closeModal(); renderHeader(); go("quest");
+  S.name=v||S.name||"HUNTER"; nmTmp=null; save(); closeModal(); renderHeader(); lbLast=0; pushLB(); go("quest");
 }
 
 /* ---------- daily quest ---------- */
@@ -578,7 +638,7 @@ function completeDaily(){
   const xp=50+Math.min(S.streak,25);
   S.log.unshift({d:t, name:"DAILY QUEST", xp,
     det:`${p.push} ${dt.reps} · ${p.sit} ${dt.reps}${p.squat?` · ${p.squat} ${dt.reps}`:""} · ${p.run} ${dt.run>=p.cap[1]&&p.dist?"30+ min":dt.run+" min"}`});
-  gainXp(xp); save();
+  gainXp(xp); save(); pushLB();
   modal(`<h2>⚠ DAILY QUEST CLEAR</h2>
     <div class="big">+${xp} XP</div>
     ${streakMsg}
@@ -656,6 +716,17 @@ function tick(){
   if(el>=TMR.total){ finishTimer(); return; }
   let idx=0; while(TMR.cum[idx]<=el) idx++;
   if(idx!==TMR.idx){ TMR.idx=idx; cue(TMR.phases[idx].p); }
+  if(TMR.mode==="rec" && S.session){
+    let chg=false;
+    for(let i=0;i<idx;i++){
+      const p=TMR.phases[i];
+      if(p.ex && !p.ck){ p.ck=true;
+        const ent=S.session.entries[p.ex];
+        if(ent && ent.sets[p.h] && !ent.sets[p.h].done){ ent.sets[p.h].done=true; chg=true; }
+      }
+    }
+    if(chg) save();
+  }
   TMR.rem=Math.ceil(TMR.cum[idx]-el);
   updTimer();
 }
@@ -677,7 +748,7 @@ function vTimer(){
         <div class="tmrbig" id="tmrTime">${fmtT(TMR.rem)}</div>
         <div class="nextlbl" id="tmrNext"></div>
         <div class="muted" style="font-size:10px;margin-top:10px">Keep this screen open — cues beep at every phase change.<br>2 short beeps = run · 1 long = walk · 3 = finished</div>
-        <button class="btn danger" onclick="stopTimer()">STOP EARLY</button>
+        <button class="btn danger" onclick="stopTimer()">STOP — PROGRESS IS SAVED</button>
       </div></div>`;
   updTimer();
 }
@@ -691,7 +762,7 @@ function stopTimer(){
 }
 function finishTimer(){
   clearInterval(TMR.int); cue("done"); unlockScreen();
-  const mode=TMR.mode, ranMin=Math.max(1,Math.round(tmrRanSec()/60));
+  const mode=TMR.mode, ranMin=Math.max(1,Math.round(tmrRanSec()/60)), phs=TMR.phases;
   TMR=null;
   if(mode==="daily"){
     creditRun(ranMin);
@@ -701,7 +772,9 @@ function finishTimer(){
     else modal(`<h2>⚠ SYSTEM</h2><div class="good">${prof().run} complete — ${ranMin} min credited.</div>
       <button class="btn" onclick="closeModal();go('quest')">COMPLETE</button>`);
   } else if(mode==="rec"){
-    if(S.session&&S.session.rec){ for(const id in S.session.entries) S.session.entries[id].sets.forEach(s=>s.done=true); }
+    if(S.session){
+      for(const p of phs){ if(p.ex && S.session.entries[p.ex] && S.session.entries[p.ex].sets[p.h]) S.session.entries[p.ex].sets[p.h].done=true; }
+    }
     save(); go("workout");
   } else {
     if(S.session) S.session.timerDone=true;
@@ -835,7 +908,7 @@ function vQuest(){
       <div class="qsub">RETURNS TOMORROW</div>
       ${bonusOk?`
         <div class="qsub" style="color:var(--gold);margin-top:10px">⚠ BONUS QUEST AVAILABLE</div>
-        ${RECBONUS[gi].map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${recRows(e)} × ${recLbl(e)}</span></div>`).join("")}
+        ${RECBONUS[gi].map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join("")}
         <button class="btn" onclick="startRecBonus()">ENTER RECOVERY BONUS (~6 MIN)</button>`
       :bonusDone?`<div class="clearbanner">✓ RECOVERY BONUS CLEARED</div>`
       :`<div class="muted" style="text-align:center;font-size:11px">One dungeon per day. Recovery is part of the training.</div>`}`;
@@ -844,7 +917,7 @@ function vQuest(){
     const v=S.gateVar[gi]?1:0;
     let goals2;
     if(day.rec){
-      goals2 = gateRecList(gi).map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${recRows(e)} × ${recLbl(e)}${e.per?" · "+e.per:""}</span></div>`).join("")
+      goals2 = gateRecList(gi).map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join("")
         + (S.profile==="trainee"?`<div class="muted" style="font-size:10px;text-align:center;margin-top:8px">All seated or supported. Stretch to light tension, never pain. Keep a hand on something stable.</div>`:"");
     } else if(day.cardio){
       const c=CARDIO[Math.min(S.cardioLvl,CARDIO.length)-1];
@@ -1082,18 +1155,18 @@ function vRecSession(){
     const rows=ent.sets.map((s,i)=>`
       <div class="setrow ${s.done?'done':''}">
         <span class="setnum">${s.done?"✓":i+1}</span>
-        <span class="gname" style="flex:1;font-size:13px">${e.mode==="reps"?"Set":"Hold"} ${i+1} — ${recLbl(e)}${e.per?" ("+(i===0?"left":"right")+")":""}</span>
+        <span class="gname" style="flex:1;font-size:13px">${e.mode==="reps"?"Set":"Hold"} ${i+1} — ${recLbl(e)}${e.alt?" total · alternating":e.per?(i===0?" · LEFT side":" · RIGHT side"):" · both sides"}</span>
         <button class="chk" onclick="togRec('${e.id}',${i})">✓</button>
       </div>`).join("");
     return `<div class="excard">
-      <div class="exhead"><span class="exname">${e.name}</span><span class="extag">${recRows(e)}×${recLbl(e)}${e.per?" · "+e.per:""}</span></div>
+      <div class="exhead"><span class="exname">${e.name}</span><span class="extag">${sideTxt(e)}</span></div>
       ${e.tip?`<div class="muted" style="font-size:10px;margin-bottom:4px">${e.tip}</div>`:""}
       ${rows}</div>`;
   }).join("");
   document.getElementById("view").innerHTML=`
     <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${recTitle(S.session)}</div>
       <div class="pbody">
-        <button class="btn" onclick="startRecTimer()">▶ GUIDED STRETCH (BEEPS)</button>
+        <button class="btn" onclick="startRecTimer()">${(()=>{const l=recList(S.session);let d=0,t=0;for(const e of l){t+=recRows(e);d+=S.session.entries[e.id].sets.filter(s=>s.done).length;}return d>0&&d<t?`▶ RESUME GUIDED — ${t-d} LEFT`:"▶ GUIDED STRETCH (BEEPS)";})()}</button>
         <div class="muted" style="font-size:10px;text-align:center;margin:8px 0">1 long beep = start · 2 short = switch · finish = triple + high tone.<br>Targets grow every clear.</div>
         ${cards}
         <button class="btn" onclick="finishRec()">CLEAR DUNGEON</button>
@@ -1104,18 +1177,20 @@ function togRec(id,i){ const s=S.session.entries[id].sets[i]; s.done=!s.done; sa
 function startRecTimer(){
   const lst=recList(S.session);
   const ph=[];
-  lst.forEach((e,ei)=>{
+  lst.forEach((e)=>{
     const rows=recRows(e);
     for(let h=0;h<rows;h++){
+      if(S.session.entries[e.id].sets[h].done) continue; /* resume: skip finished holds */
       const secs = e.mode==="reps" ? Math.max(30, recVal(e)*4) : recVal(e);
       const lbl = e.name.toUpperCase()
         + (e.per?(h===0?" — LEFT":" — RIGHT"):"")
         + (e.mode==="reps"?" ("+recVal(e)+" REPS)":"");
-      ph.push({l:lbl, s:secs, p:"walk"});
-      const last = ei===lst.length-1 && h===rows-1;
-      if(!last) ph.push({l:"SWITCH · BREATHE", s:12, p:"run"});
+      ph.push({l:lbl, s:secs, p:"walk", ex:e.id, h:h});
+      ph.push({l:"SWITCH · BREATHE", s:12, p:"run"});
     }
   });
+  if(ph.length && ph[ph.length-1].p==="run") ph.pop();
+  if(!ph.length){ modal(`<h2>⚠ SYSTEM</h2><div>Every stretch is already complete.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
   startTimer(ph,"rec");
 }
 function finishRec(){
@@ -1178,7 +1253,7 @@ function completeCommon(name, xp, detail, extraHtml){
   S.log.unshift({d:t, name, xp, det:detail});
   if(S.log.length>200) S.log.length=200;
   S.session=null;
-  gainXp(xp); save();
+  gainXp(xp); save(); pushLB();
   modal(`<h2>⚠ DUNGEON CLEAR</h2>
     <div class="big">+${xp} XP</div>
     ${extraHtml||""}
@@ -1225,7 +1300,13 @@ function vStats(){
         <div class="muted" style="font-size:10px;margin-top:8px">NEXT RANK: ${(()=>{const cur=rankOf(S.level);for(const[n,m]of RANKS){if(m>S.level)return n+" at level "+m;}return "MAX — SSS ACHIEVED";})()}</div>
       </div></div>
     <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>CURRENT WORKING WEIGHTS</div>
-      <div class="pbody">${prs||`<div class="muted">No lifts calibrated yet. Clear your first quests — the System is watching.</div>`}</div></div>`;
+      <div class="pbody">${prs||`<div class="muted">No lifts calibrated yet. Clear your first quests — the System is watching.</div>`}</div></div>
+    <div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>THE GUILD</div>
+      <div class="pbody" id="lbPanel"><div class="muted">CONNECTING…</div></div></div>`;
+  fetchLB(function(rows,live){
+    const el=document.getElementById("lbPanel");
+    if(el) el.innerHTML=lbRows(rows,live);
+  });
 }
 
 /* ---------- weight ---------- */
@@ -1325,6 +1406,9 @@ function vSys(){
         <div class="goalrow"><span class="gname">Name</span><span class="gval">${S.name||"—"}</span></div>
         <div class="goalrow"><span class="gname">Profile</span><span class="gval">${prof().lbl}</span></div>
         <button class="btn ghost" onclick="askName(false)">CHANGE NAME / PROFILE</button>
+        <div class="sect">THE GUILD</div>
+        <div class="muted" style="font-size:11px;line-height:1.6">A friendly roster of family and friends — shares only your hunter name, level, rank and streak, never workouts or weight. ${S.lbOpt?'<b class="good">You are in the guild.</b>':'You are not in the guild yet.'}</div>
+        <button class="btn ghost" onclick="S.lbOpt=!S.lbOpt;save();if(S.lbOpt){lbLast=0;pushLB();}vSys()">${S.lbOpt?"LEAVE THE GUILD (stop sharing)":"JOIN THE GUILD"}</button>
         <div class="sect">BACKUP</div>
         <div class="muted" style="font-size:11px;line-height:1.6">All data lives in this browser only. Export a backup occasionally.${S.lastBackup?` Last backup: ${S.lastBackup}.`:""}</div>
         <button class="btn ghost" onclick="exportData();vSys()">EXPORT DATA (download file)</button>
@@ -1375,6 +1459,7 @@ const VIEWS={quest:vQuest, workout:vWorkout, stats:vStats, weight:vWeight, log:v
 renderHeader(); renderNav();
 if(S.session) go("workout"); else go("quest");
 if(!S.name) askName(true);
+pushLB();
 if("serviceWorker" in navigator && location.protocol.indexOf("http")===0){
   navigator.serviceWorker.register("./sw.js").catch(function(){});
 }
