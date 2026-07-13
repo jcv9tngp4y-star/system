@@ -580,7 +580,7 @@ let lbLast=0;
 function pushLB(){
   if(!S.lbOpt) return;
   if(typeof navigator!=="undefined" && navigator.onLine===false) return;
-  const now=Date.now(); if(now-lbLast<60000) return; lbLast=now;
+  const now=Date.now(); if(now-lbLast<180000) return; lbLast=now; /* heartbeat max every 3 min */
   try{
     fetch(FBURL+"/"+S.lbId+"?key="+FB.key,{method:"PATCH",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({fields:{
@@ -588,7 +588,7 @@ function pushLB(){
         level:{integerValue:String(S.level)},
         rank:{stringValue:rankOf(S.level)},
         streak:{integerValue:String(S.streak)},
-        updated:{stringValue:todayStr()}
+        updated:{stringValue:new Date().toISOString()}
       }})}).catch(function(){});
   }catch(e){}
 }
@@ -612,12 +612,20 @@ function fetchLB(cb){
 }
 function lbRows(rows,live){
   if(!rows||!rows.length) return `<div class="muted">${S.lbOpt?"The guild hall is empty — members appear when they sync online.":"Join the guild from the SYSTEM tab to appear here."}</div>`;
-  const t=todayStr();
+  const now=Date.now();
+  const dot=u=>{
+    if(!u) return "";
+    const d=new Date(u); if(isNaN(d)) return "";
+    const age=now-d.getTime();
+    if(age<5*60000) return '<span style="color:var(--good)">●</span> ';
+    if(d.toLocaleDateString("en-CA")===todayStr()) return '<span style="color:var(--gold)">●</span> ';
+    return "";
+  };
   return `<div class="muted" style="font-size:10px;text-align:center;margin-bottom:8px">Everyone leveling, together. No rankings — just the guild.</div>`
    + rows.map(r=>`<div class="goalrow" style="${r.me?'color:#fff;text-shadow:0 0 8px var(--p)':''}">
-    <span class="gname">${r.updated===t?'<span style="color:var(--good)">●</span> ':''}${String(r.name).replace(/[<>&]/g,"")}${r.me?" ◂ YOU":""}</span>
+    <span class="gname">${dot(r.updated)}${String(r.name).replace(/[<>&]/g,"")}${r.me?" ◂ YOU":""}</span>
     <span class="gval">LV ${r.level} · ${r.rank} · ⚔ ${r.streak}</span></div>`).join("")
-   + `<div class="muted" style="font-size:9px;margin-top:6px;text-align:center">● = active today · ${live?"LIVE":"offline — last known"+(S.lbCache&&S.lbCache.t?" · "+S.lbCache.t:"")}</div>`;
+   + `<div class="muted" style="font-size:9px;margin-top:6px;text-align:center"><span style="color:var(--good)">●</span> here now · <span style="color:var(--gold)">●</span> active today · ${live?"LIVE":"offline — last known"}</div>`;
 }
 if(!S.recN) S.recN={};
 if(S.recBonusD===undefined) S.recBonusD=null;
@@ -687,7 +695,7 @@ function renderNav(){
   document.getElementById("nav").innerHTML = NAVS.map(([id,ico,lbl])=>
     `<button class="${curView===id?'on':''}" onclick="go('${id}')"><span class="ico">${ico}</span>${lbl}</button>`).join("");
 }
-function go(v){ curView=v; renderNav(); VIEWS[v](); window.scrollTo(0,0); }
+function go(v){ curView=v; renderNav(); VIEWS[v](); window.scrollTo(0,0); if(typeof pushLB==="function") pushLB(); }
 
 /* ---------- name / profile ---------- */
 /* ---------- name / profile registration ---------- */
