@@ -222,6 +222,20 @@ nav button.on{color:#fff;text-shadow:0 0 8px var(--p)}
 .gold{color:var(--gold)} .good{color:var(--good)}
 textarea.io{width:100%;height:90px;background:rgba(0,0,0,.5);border:1px solid rgba(177,108,255,.5);color:var(--txt);font-size:10px;padding:8px;font-family:monospace;margin-top:10px}
 .sect{font-size:10px;letter-spacing:3px;color:var(--dim);margin:16px 0 6px}
+/* small-screen hardening: prevent overlap on narrow phones */
+.goalrow{gap:10px}
+.goalrow .gname{min-width:0;overflow-wrap:anywhere}
+.goalrow .gval{flex-shrink:0;text-align:right}
+.exhead{flex-wrap:wrap}
+@media (max-width:390px){
+  .ptitle{letter-spacing:3px;font-size:12px;gap:8px}
+  .streakchip{font-size:8px;padding:3px 5px;top:8px;right:8px}
+  .qname{font-size:16px;letter-spacing:2px}
+  .tmrbig{font-size:46px}
+  .phaselbl{font-size:15px;letter-spacing:4px}
+  .hname{font-size:10px;letter-spacing:2px}
+  .stat b{font-size:16px}
+}
 </style>
 </head>
 <body>
@@ -498,7 +512,7 @@ const PROFILES={
            pen:{label:"Run",mode:"fix",min:20}, workXP:295, deload:true},
  jocelyne:{lbl:"JOCELYNE",        desc:"Mon upper · Fri lower · frisbee Tue/Thu",
            reps:["Push-ups","Air squats"], repBase:20, repCap:50, repStep:1, repPer:3,
-           timed:[{n:"Plank",base:5,cap:10,per:18,kind:"plank"}],
+           timed:[{n:"Plank",base:3,cap:8,per:18,kind:"plank"}],
            pen:{label:"Run",mode:"fix",min:20}, workXP:240, deload:true},
  eileen:  {lbl:"EILEEN",          desc:"M/W/F full body · home gym",
            reps:["Wall push-ups","Sit-to-stands"], repBase:8, repCap:25, repStep:2, repPer:3,
@@ -566,6 +580,8 @@ if(Array.isArray(S.gateVar)){
   delete S.gateVar;
 }
 if(S.lastBackup===undefined){ S.lastBackup=null; S.bkSnooze=null; }
+if(S.profile==="hunter" && S.name==="ADAM" && !S.fx714){ S.fx714=1; S.gateV={}; }
+if(typeof S.shield!=="number") S.shield=0;
 for(const id in S.ex){ const st=S.ex[id]; if(st.calibrated && !st.base) st.base=st.best||0; }
 if(typeof S.recDone!=="number") S.recDone=0;
 if(!S.trainStart) S.trainStart = (S.log&&S.log.length) ? S.log[S.log.length-1].d : todayStr();
@@ -630,7 +646,9 @@ function lbRows(rows,live){
 if(!S.recN) S.recN={};
 if(S.recBonusD===undefined) S.recBonusD=null;
 function recVal(e){ const n=S.recN[e.id]||0;
-  return e.mode==="reps" ? Math.min(e.cap, e.reps + n) : Math.min(e.cap, e.sec + 2*n); }
+  let v = e.mode==="reps" ? Math.min(e.cap, e.reps + n) : Math.min(e.cap, e.sec + 2*n);
+  if(e.alt && v%2) v-=1; /* alternating moves: always even, same count each limb */
+  return v; }
 function recRows(e){ return e.holds||e.sets; }
 function recLbl(e){ return e.mode==="reps" ? recVal(e)+" reps" : recVal(e)+"s"; }
 function sideTxt(e){ /* full wording for session cards */
@@ -744,6 +762,9 @@ function checkPenalty(){
   const anchor=[S.daily.lastComplete,S.daily.penClear].filter(Boolean).sort().pop();
   if(!S.daily.penalty && anchor && anchor<yStr){
     const gap=dayDiff(anchor,t);
+    if(S.shield>0 && gap===2){ /* exactly one missed day: shield absorbs it */
+      S.shield=0; S.daily.lastComplete=yStr; S.shieldNote=true; save(); return;
+    }
     S.daily.penalty=true; S.streak=0;
     if(gap>=7){
       const before=S.daily.count;
@@ -793,6 +814,10 @@ function completeDaily(){
     S.streak = (prev===yStr) ? S.streak+1 : 1;
     if(S.streak>S.bestStreak) S.bestStreak=S.streak;
     streakMsg=`<div class="muted">Streak: ${S.streak} day${S.streak===1?"":"s"}</div>`;
+    if(S.streak>0 && S.streak%14===0 && S.shield<1){
+      S.shield=1;
+      streakMsg+=`<div style="color:var(--gold);font-size:12px;letter-spacing:1px;margin-top:6px">🛡 SYSTEM GIFT: STREAK SHIELD EARNED<br><span class="muted" style="font-size:10px">Absorbs one missed day automatically. Cannot be stockpiled.</span></div>`;
+    }
   }
   const xp=50+Math.min(S.streak,25);
   S.log.unshift({d:t, name:"DAILY QUEST", xp, det:items.map(i=>`${i.n} ${i.g}${i.unit==="min"?" min":""}`).join(" · ")});
@@ -993,6 +1018,12 @@ function vQuest(){
   const decayHtml = S.decayNote ? `
     <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:11px;letter-spacing:1px">⚠ ${S.decayNote}</div></div>` : "";
   if(S.decayNote){ S.decayNote=null; save(); }
+  const shieldHtml = S.shieldNote ? `
+    <div class="panel"><div class="pbody" style="text-align:center">
+      <span style="font-size:12px;letter-spacing:2px;color:var(--gold)">🛡 SHIELD CONSUMED — YOUR STREAK SURVIVES</span>
+      <div class="muted" style="font-size:10px;margin-top:4px">One missed day absorbed. Earn another at your next 14-day mark.</div>
+    </div></div>` : "";
+  if(S.shieldNote){ S.shieldNote=null; save(); }
   const needBk = (S.lastBackup ? dayDiff(S.lastBackup,t)>=30 : (S.daily.count+S.quests)>=8)
               && (!S.bkSnooze || dayDiff(S.bkSnooze,t)>=7);
   const bkHtml = needBk ? `
@@ -1043,11 +1074,11 @@ function vQuest(){
   }
   const dailyHtml=`
     <div class="panel dq">
-      <span class="streakchip ${S.streak?'':'zero'}">⚔ ${S.streak} DAY${S.streak===1?"":"S"}</span>
+      <span class="streakchip ${S.streak?'':'zero'}">⚔ ${S.streak} DAY${S.streak===1?"":"S"}${S.shield?" 🛡":""}</span>
       <div class="ptitle"><div class="diamond"><span>!</span></div>DAILY QUEST — TRAINING</div>
       <div class="pbody">${dailyBody}</div></div>`;
 
-  document.getElementById("view").innerHTML = storeWarn + deloadBanner + decayHtml + penHtml + dailyHtml
+  document.getElementById("view").innerHTML = storeWarn + deloadBanner + decayHtml + shieldHtml + penHtml + dailyHtml
     + gatePanel(t) + schedulePanel() + bkHtml;
 }
 
