@@ -439,7 +439,7 @@ const LIFTS={
    {id:"mcurl",   name:"DB Curl",                  sets:2, lo:10, hi:15, inc:5,  note:"weight = each dumbbell"},
    {id:"mext",    name:"Overhead DB Extension",    sets:2, lo:10, hi:15, inc:5}]]},
  momLow:{name:"LOWER BODY", ab:[
-  [{id:"msq",     name:"Barbell Back Squat",       sets:4, lo:8,  hi:12, inc:10},
+  [{id:"mdsq",    name:"Dumbbell Squat",           sets:4, lo:8,  hi:12, inc:5,  note:"weight = each dumbbell, held at sides or goblet"},
    {id:"mrdl",    name:"Romanian Deadlift",        sets:3, lo:10, hi:12, inc:10},
    {id:"mlun",    name:"DB Reverse Lunge",         sets:3, lo:8,  hi:10, inc:5,  note:"all reps per leg · dumbbells in hands"},
    {id:"mgb",     name:"Barbell Glute Bridge",     sets:3, lo:10, hi:15, inc:10},
@@ -798,7 +798,10 @@ function dqItems(){
   p.timed.forEach(tm=>items.push({n:tm.n, unit:"min", g:dqTimedTarget(tm), kind:tm.kind, dist:tm.dist&&dqTimedTarget(tm)>=tm.cap}));
   return items;
 }
-function dailyGoals(){ return dqItems().map(i=>i.g); }
+function dailyGoals(){
+  const mult=S.daily.penalty?1.5:1;
+  return dqItems().map(i=>Math.ceil(i.g*mult));
+}
 function timedIdx(kind){
   const p=prof();
   for(let i=0;i<p.timed.length;i++) if(p.timed[i].kind===kind) return p.reps.length+i;
@@ -858,7 +861,10 @@ function completeDaily(){
   S.daily.lastComplete=t; S.daily.count++;
   let streakMsg;
   if(S.daily.penalty){
-    streakMsg=`<span class="warn" style="display:block">STREAK LOCKED — PENALTY QUEST UNCLEARED</span>`;
+    S.daily.penalty=false; S.daily.penClear=t;
+    S.streak=1;
+    S.log.unshift({d:t, name:"PENALTY REPAID", xp:0, det:"Cleared the day at 150% targets. Streak restarts."});
+    streakMsg=`<div style="color:var(--gold);font-size:12px;letter-spacing:1px">⚠ PENALTY REPAID AT 150% — STREAK RESTARTS AT 1</div>`;
   } else {
     S.streak = (prev===yStr) ? S.streak+1 : 1;
     if(S.streak>S.bestStreak) S.bestStreak=S.streak;
@@ -889,7 +895,7 @@ function doClearPenalty(){
 }
 function startDailyTimed(i){
   const items=dqItems(), it=items[i];
-  const rem=Math.max(1, it.g - S.daily.parts[i]);
+  const rem=Math.max(1, dailyGoals()[i] - (S.daily.parts[i]||0));
   const lbl=it.n.toUpperCase();
   const ph=[{l:lbl, s:rem*60, p:it.kind==="plank"?"walk":"run"}];
   startTimer(ph,"daily");
@@ -1082,12 +1088,11 @@ function vQuest(){
       <button class="btn ghost" onclick="S.bkSnooze=todayStr();save();vQuest()">REMIND ME LATER</button>
     </div></div>` : "";
   const penHtml = S.daily.penalty ? `
-    <div class="panel red"><div class="ptitle"><div class="diamond"><span>!</span></div>PENALTY QUEST</div>
+    <div class="panel red"><div class="ptitle"><div class="diamond"><span>!</span></div>PENALTY ACTIVE</div>
       <div class="pbody">
         <div class="qsub" style="color:var(--bad)">YOU FAILED TO COMPLETE THE DAILY QUEST</div>
-        <div class="goalrow"><span class="gname">${p.pen.label} without stopping</span><span class="gval" style="color:var(--bad)">${penMin()} min</span></div>
-        <div class="warn">STREAK LOCKED AT 0 UNTIL CLEARED</div>
-        <button class="btn danger" onclick="clearPenalty()">PENALTY COMPLETE</button>
+        <div class="muted" style="text-align:center;font-size:12px;line-height:1.7">Today's daily quest targets are raised to <b style="color:var(--bad)">150%</b>.<br>
+        Clear the inflated quest to repay the debt — streak unlocks the moment you do.</div>
       </div></div>` : "";
 
   let dailyBody;
@@ -1095,8 +1100,9 @@ function vQuest(){
     dailyBody=`<div class="clearbanner">✓ DAILY QUEST CLEARED</div>
       <div class="muted" style="text-align:center;font-size:11px">Completed ${S.daily.count}× · resets at midnight</div>`;
   } else {
+    const gPen=dailyGoals();
     dailyBody = items.map((it,i)=>{
-      const v=S.daily.parts[i]||0, g=it.g, hit=v>=g;
+      const v=S.daily.parts[i]||0, g=gPen[i], hit=v>=g;
       return `
       <div class="setrow ${hit?'done':''}">
         <span class="setnum">${hit?"✓":i+1}</span>
@@ -1113,7 +1119,7 @@ function vQuest(){
           <button onclick="addDaily(${i},5)">+5</button>
         </div>
       </div>
-      ${it.unit==="min"&&v<g?`<button class="btn ghost" style="font-size:11px" onclick="startDailyTimed(${i})">⏱ GUIDED ${it.n.toUpperCase()} — ${g-v} MIN, BEEPS AT THE END</button>`:""}`;
+      ${it.unit==="min"&&(S.daily.parts[i]||0)<gPen[i]?`<button class="btn ghost" style="font-size:11px" onclick="startDailyTimed(${i})">⏱ GUIDED ${it.n.toUpperCase()} — ${gPen[i]-(S.daily.parts[i]||0)} MIN, BEEPS AT THE END</button>`:""}`;
     }).join("")
       + (items.some(i=>i.dist)?`<div class="wrow" style="margin-top:8px">
           <span class="muted" style="font-size:11px">Distance (km, optional)</span>
