@@ -223,6 +223,13 @@ nav button.on{color:#fff;text-shadow:0 0 8px var(--p)}
 .gold{color:var(--gold)} .good{color:var(--good)}
 textarea.io{width:100%;height:90px;background:rgba(0,0,0,.5);border:1px solid rgba(var(--prgb),.5);color:var(--txt);font-size:10px;padding:8px;font-family:monospace;margin-top:10px}
 .sect{font-size:10px;letter-spacing:3px;color:var(--dim);margin:16px 0 6px}
+.fastwrap{position:relative;width:200px;height:200px;margin:6px auto 10px}
+.fastring{width:200px;height:200px;display:block;filter:drop-shadow(0 0 6px rgba(var(--prgb),.5))}
+.fastring circle{transition:stroke-dashoffset .6s linear}
+.fastcenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.fastlbl{font-size:9px;letter-spacing:3px;color:var(--dim)}
+.fastclock{font-size:30px;font-weight:300;letter-spacing:2px;color:#fff;text-shadow:0 0 14px var(--p);font-variant-numeric:tabular-nums;margin:2px 0}
+.fastsub{font-size:10px;letter-spacing:1px;color:var(--dim);text-align:center;padding:0 18px}
 /* small-screen hardening: prevent overlap on narrow phones */
 .goalrow{gap:10px}
 .goalrow .gname{min-width:0;overflow-wrap:anywhere}
@@ -669,6 +676,43 @@ if(!S.fastTarget) S.fastTarget=16;
 if(!Array.isArray(S.fastLog)) S.fastLog=[];
 if(S.fastXpD===undefined) S.fastXpD=null;
 function fastHrs(){ return S.fastStart ? (Date.now()-new Date(S.fastStart).getTime())/36e5 : 0; }
+function fastSecs(){ return S.fastStart ? Math.max(0,Math.floor((Date.now()-new Date(S.fastStart).getTime())/1000)) : 0; }
+function fmtHMS(s){ const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return h+":"+String(m).padStart(2,"0")+":"+String(x).padStart(2,"0"); }
+function fmtHM(s){ const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
+  return (h?h+"h ":"")+m+"m"; }
+let FTMR=null;
+function fastTick(){
+  const el=document.getElementById("fastClock");
+  if(!el||!S.fastStart){ if(FTMR){clearInterval(FTMR);FTMR=null;} return; }
+  const s=fastSecs(), goal=S.fastTarget*3600, over=s>=goal;
+  el.textContent=fmtHMS(s);
+  const ring=document.getElementById("fastRing");
+  if(ring){
+    ring.setAttribute("stroke-dashoffset",(552.9*(1-Math.min(1,s/goal))).toFixed(1));
+    ring.setAttribute("stroke",over?"var(--good)":"var(--p)");
+  }
+  const sub=document.getElementById("fastSub");
+  if(sub) sub.innerHTML=over
+    ? `<span class="good">+${fmtHM(s-goal)} past your ${S.fastTarget}h goal</span>`
+    : `${fmtHM(goal-s)} to go · goal ${S.fastTarget}h`;
+  const lbl=document.getElementById("fastLbl");
+  if(lbl) lbl.textContent=over?"GOAL REACHED":"FASTING";
+}
+function fastTimerOn(){ if(FTMR) clearInterval(FTMR); if(S.fastStart){ FTMR=setInterval(fastTick,1000); fastTick(); } }
+function adjustStart(){
+  modal(`<h2>⚠ SYSTEM</h2><div class="muted">Forgot to start it? Push the start time earlier.</div>
+    <div style="display:flex;gap:6px;margin:12px 0">
+      ${[15,30,60,120].map(m=>`<button class="btn ghost" style="margin:0;font-size:11px;letter-spacing:1px" onclick="backdate(${m})">−${m<60?m+"m":(m/60)+"h"}</button>`).join("")}
+    </div>
+    <div class="muted" style="font-size:10px">Started ${S.fastStart?new Date(S.fastStart).toLocaleString([], {weekday:"short",hour:"numeric",minute:"2-digit"}):""}</div>
+    <button class="btn" onclick="closeModal();vWeight()">DONE</button>`);
+}
+function backdate(mins){
+  if(!S.fastStart) return;
+  S.fastStart=new Date(new Date(S.fastStart).getTime()-mins*60000).toISOString();
+  save(); adjustStart(); fastTick();
+}
 for(const id in S.ex){ const st=S.ex[id]; if(st.calibrated && !st.base) st.base=st.best||0; }
 if(typeof S.recDone!=="number") S.recDone=0;
 if(!S.trainStart) S.trainStart = (S.log&&S.log.length) ? S.log[S.log.length-1].d : todayStr();
@@ -1748,20 +1792,35 @@ function vWeight(){
     </div>`;
   let fastCard;
   if(S.fastStart){
-    const h=fastHrs(), pct=Math.min(100,Math.round(h/S.fastTarget*100));
-    const ends=new Date(new Date(S.fastStart).getTime()+S.fastTarget*36e5);
-    const hh=Math.floor(h), mm=Math.floor((h-hh)*60);
+    const s=fastSecs(), goal=S.fastTarget*3600, over=s>=goal;
+    const started=new Date(S.fastStart);
+    const ends=new Date(started.getTime()+goal*1000);
     fastCard=`
-      <div class="qsub" style="margin-bottom:4px">MANA RECOVERY — ACTIVE FAST</div>
-      <div class="cbig" style="font-size:30px">${hh}h ${String(mm).padStart(2,"0")}m <span class="muted" style="font-size:13px">/ ${S.fastTarget}h</span></div>
-      <div class="abar"><div class="afill" style="width:${pct}%"></div></div>
-      <div class="muted" style="font-size:10px;text-align:center;margin-top:5px">${h>=S.fastTarget?"TARGET REACHED — end whenever you eat":"target reached at "+ends.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</div>
-      <button class="btn" onclick="endFast()">END FAST (first bite)</button>`;
+      <div class="fastwrap">
+        <svg class="fastring" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="88" fill="none" stroke="rgba(var(--prgb),.16)" stroke-width="9"/>
+          <circle id="fastRing" cx="100" cy="100" r="88" fill="none" stroke="${over?'var(--good)':'var(--p)'}"
+            stroke-width="9" stroke-linecap="round" stroke-dasharray="552.9"
+            stroke-dashoffset="${(552.9*(1-Math.min(1,s/goal))).toFixed(1)}" transform="rotate(-90 100 100)"/>
+        </svg>
+        <div class="fastcenter">
+          <div class="fastlbl" id="fastLbl">${over?"GOAL REACHED":"FASTING"}</div>
+          <div class="fastclock" id="fastClock">${fmtHMS(s)}</div>
+          <div class="fastsub" id="fastSub">${over?`<span class="good">+${fmtHM(s-goal)} past your ${S.fastTarget}h goal</span>`:`${fmtHM(goal-s)} to go · goal ${S.fastTarget}h`}</div>
+        </div>
+      </div>
+      <div class="muted" style="font-size:10px;text-align:center">started ${started.toLocaleString([], {weekday:"short",hour:"numeric",minute:"2-digit"})} · ${over?"you're in overtime — keep going or eat":"goal at "+ends.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</div>
+      <div class="muted" style="font-size:10px;text-align:center;margin-top:10px">CHANGE GOAL</div>
+      <div style="display:flex;gap:5px;justify-content:center;margin:6px 0">
+        ${[12,14,16,18,20,24].map(hh=>`<button style="flex:1;padding:7px 2px;font-family:inherit;font-size:11px;cursor:pointer;background:${S.fastTarget===hh?'rgba(var(--pdrgb),.55)':'rgba(0,0,0,.35)'};border:1px solid rgba(var(--prgb),${S.fastTarget===hh?'0.9':'0.35'});color:#fff" onclick="S.fastTarget=${hh};save();vWeight()">${hh}</button>`).join("")}
+      </div>
+      <button class="btn" onclick="endFast()">END FAST (first bite)</button>
+      <button class="btn ghost" onclick="adjustStart()">ADJUST START TIME</button>`;
   } else {
     fastCard=`
       <div class="muted" style="font-size:11px;text-align:center">Start when you finish your last bite of the day.</div>
       <div style="display:flex;gap:6px;justify-content:center;margin:10px 0">
-        ${[12,14,16,18,20].map(hh=>`<button class="repctl-chip" style="padding:8px 10px;font-family:inherit;font-size:12px;cursor:pointer;background:${S.fastTarget===hh?'rgba(123,44,191,.5)':'rgba(0,0,0,.35)'};border:1px solid rgba(177,108,255,${S.fastTarget===hh?'0.9':'0.4'});color:#fff" onclick="S.fastTarget=${hh};save();vWeight()">${hh}h</button>`).join("")}
+        ${[12,14,16,18,20,24].map(hh=>`<button class="repctl-chip" style="padding:8px 10px;font-family:inherit;font-size:12px;cursor:pointer;background:${S.fastTarget===hh?'rgba(123,44,191,.5)':'rgba(0,0,0,.35)'};border:1px solid rgba(177,108,255,${S.fastTarget===hh?'0.9':'0.4'});color:#fff" onclick="S.fastTarget=${hh};save();vWeight()">${hh}h</button>`).join("")}
       </div>
       <button class="btn" onclick="startFast()">▶ START FAST</button>`;
   }
@@ -1787,6 +1846,7 @@ function vWeight(){
       </div></div>
     <div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>FASTING</div>
       <div class="pbody">${fastCard}${fstats}<div class="wlist">${flist}</div></div></div>`;
+  fastTimerOn();
 }
 function startFast(){ S.fastStart=new Date().toISOString(); save(); vWeight(); }
 function endFast(){
@@ -1797,8 +1857,10 @@ function endFast(){
   let xpMsg="";
   if(hit && S.fastXpD!==t){ S.fastXpD=t; gainXp(10); xpMsg=`<div class="big" style="font-size:20px">+10 XP</div>`; }
   save();
+  if(FTMR){ clearInterval(FTMR); FTMR=null; }
   modal(`<h2>⚠ FAST COMPLETE</h2>${xpMsg}
-    <div>${hrs.toFixed(1)} hours${hit?' — <b class="good">target met</b>':' — <span class="muted">short of '+S.fastTarget+'h</span>'}</div>
+    <div class="big" style="font-size:22px">${fmtHM(Math.round(hrs*3600))}</div>
+    <div>${hit?'<b class="good">goal met'+(hrs>S.fastTarget+0.1?" — "+fmtHM(Math.round((hrs-S.fastTarget)*3600))+" past it":"")+'</b>':'<span class="muted">short of your '+S.fastTarget+'h goal — still counts, log it and move on</span>'}</div>
     <button class="btn" onclick="closeModal();vWeight()">COMPLETE</button>`);
 }
 function addWeight(){
