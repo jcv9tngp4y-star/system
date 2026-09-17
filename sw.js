@@ -1,6 +1,6 @@
-/* THE SYSTEM - offline cache v4 (app files only; API calls pass through untouched) */
-const CACHE = "system-v4";
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-180.png", "./icon-512.png"];
+/* THE SYSTEM - offline cache v5 (app files only; API calls pass through untouched) */
+const CACHE = "system-v5";
+const ASSETS = ["./", "./index.html", "./styles.css", "./programs.js", "./manifest.json", "./icon-180.png", "./icon-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
