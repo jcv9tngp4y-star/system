@@ -291,9 +291,138 @@ function buildPlanSession(plan, nowIso){
   };
 }
 
+const WEEKDAY_SHORT=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const MONTH_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const WORKOUT_NAME_MAP=[
+  [/^lower a\s*-\s*squat$/i, "Legs (squat day)"],
+  [/^lower\s*\(\s*squat focus\s*\)$/i, "Legs (squat day)"],
+  [/^lower b\s*-\s*hinge$/i, "Legs (deadlift day)"],
+  [/^lower\s*-\s*hinge$/i, "Legs (deadlift day)"],
+  [/^upper push$/i, "Chest, shoulders & triceps"],
+  [/^upper pull\s*\+\s*shoulders$/i, "Back, biceps & shoulders"],
+  [/^conditioning\s*\+\s*basketball\s*\+\s*core$/i, "Cardio, basketball & abs"]
+];
+
+function parseIsoDate(iso){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||"");
+  if(!m) return null;
+  return Date.UTC(+m[1], +m[2]-1, +m[3]);
+}
+function formatIsoDate(ms){
+  const d=new Date(ms);
+  const y=d.getUTCFullYear();
+  const mo=String(d.getUTCMonth()+1).padStart(2,"0");
+  const da=String(d.getUTCDate()).padStart(2,"0");
+  return y+"-"+mo+"-"+da;
+}
+function addIsoDays(iso, n){
+  const ms=parseIsoDate(iso);
+  if(ms==null || !isFinite(n)) return "";
+  return formatIsoDate(ms + Math.trunc(n)*864e5);
+}
+function mondayIndex(iso){
+  const ms=parseIsoDate(iso);
+  if(ms==null) return 0;
+  const sun0=new Date(ms).getUTCDay();
+  return sun0===0 ? 6 : sun0-1;
+}
+function monthDay(iso){
+  const ms=parseIsoDate(iso);
+  if(ms==null) return "";
+  const d=new Date(ms);
+  return MONTH_SHORT[d.getUTCMonth()]+" "+d.getUTCDate();
+}
+
+/* Old coach titles stay readable after the names in Firestore change.
+   "Ramp-in ·" is a phase label, not the workout. */
+function friendlyWorkoutName(title){
+  let s=String(title==null?"":title).replace(/\s+/g," ").trim();
+  s=s.replace(/^ramp-in\s*[·•|:–—-]\s*/i,"").trim();
+  if(!s) return "";
+  const key=s.replace(/[–—]/g,"-").replace(/\s+/g," ").trim();
+  if(/^rest$/i.test(key)) return "Rest";
+  for(let i=0;i<WORKOUT_NAME_MAP.length;i++){
+    if(WORKOUT_NAME_MAP[i][0].test(key)) return WORKOUT_NAME_MAP[i][1];
+  }
+  return s;
+}
+
+function programRange(program){
+  if(!program || typeof program!=="object") return null;
+  const start=program.startDate;
+  const weeks=Number(program.weeks);
+  if(typeof start==="string" && parseIsoDate(start)!=null && isFinite(weeks) && weeks>0){
+    return {start:start, end:addIsoDays(start, Math.round(weeks)*7)};
+  }
+  const dates=[];
+  const days=Array.isArray(program.days)?program.days:[];
+  for(let i=0;i<days.length;i++){
+    const d=days[i] && days[i].date;
+    if(parseIsoDate(d)!=null) dates.push(d);
+  }
+  if(!dates.length) return null;
+  dates.sort();
+  return {start:dates[0], end:addIsoDays(dates[dates.length-1], 1)};
+}
+function programTitle(program, date){
+  const days=program && Array.isArray(program.days) ? program.days : [];
+  let title="";
+  for(let i=0;i<days.length;i++){
+    if(days[i] && days[i].date===date) title=days[i].title||"";
+  }
+  return title;
+}
+
+/* Today plus the next six days. A published plan wins, then a coach
+   program day inside the program's range, then the standard week.
+   A date inside the program with nothing written is a rest day. */
+function weekAhead(opts){
+  const today=opts && opts.today;
+  const plans=opts && opts.plans || {};
+  const program=opts && opts.program || null;
+  const weekNames=opts && opts.weekNames || [];
+  const doneDate=opts && opts.doneDate || "";
+  const range=programRange(program);
+  const rows=[];
+  if(parseIsoDate(today)==null) return rows;
+  for(let i=0;i<7;i++){
+    const date=addIsoDays(today, i);
+    const wd=mondayIndex(date);
+    const plan=plans && plans[date];
+    const hasPlan=!!(plan && typeof plan==="object");
+    let name="";
+    let planStatus="";
+    if(hasPlan){
+      planStatus=plan.status||"";
+      name=friendlyWorkoutName(plan.title)||"Training";
+    } else if(range && date>=range.start && date<range.end){
+      const raw=programTitle(program, date);
+      name=raw ? (friendlyWorkoutName(raw)||"Training") : "Rest";
+    } else {
+      const raw=weekNames[wd]||"";
+      name=raw ? (friendlyWorkoutName(raw)||"Rest") : "Rest";
+    }
+    const isToday=date===today;
+    let status="UPCOMING";
+    if(name==="Rest") status="REST";
+    else if(planStatus==="completed" || planStatus==="skipped" || (isToday && doneDate===date)) status="DONE";
+    else if(isToday) status="TODAY";
+    rows.push({
+      date:date,
+      today:isToday,
+      label:isToday ? "Today · "+WEEKDAY_SHORT[wd] : WEEKDAY_SHORT[wd],
+      when:monthDay(date),
+      name:name,
+      status:status
+    });
+  }
+  return rows;
+}
+
 const Logic={
   round5, round5a, e1rm, fw, parseNum, parseWhole,
   isCalendarDeloadWeek, shouldPromptDeload, isDeloadActive,
-  representativeWeight, progressExercise, setsRecord, normalizePlan, buildPlanSession
+  representativeWeight, progressExercise, setsRecord, normalizePlan, buildPlanSession,
+  addIsoDays, friendlyWorkoutName, weekAhead
 };
 if(typeof module!=="undefined" && module.exports) module.exports=Logic;

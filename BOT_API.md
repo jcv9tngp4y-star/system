@@ -138,7 +138,7 @@ users/{uid}/program/current
 }
 ```
 
-`days[].date` is the athlete’s local date. The phone lists the next 7 dates that are today or later, and still falls back to the built-in week for any date that has no plan document. Only the bot can write `program/current`.
+`days[].date` is the athlete’s local date. The quest screen shows one list: today and the six days after it, labelled by weekday. For each date the phone uses, in order, the title of `plans/{date}` if that document exists, the `days[]` title when the date falls inside this program, or the built-in week when the date is outside the program. A date inside the program with no `days[]` entry is rest. `startDate` plus `weeks` is the range (the end date is not included). If those fields are missing, the range is the first listed day through the last. Only the bot can write `program/current`. The phone also shortens a few older titles for display (`Ramp-in · Lower — Hinge` reads as “Legs (deadlift day)”, and the same for the other ramp-in names). Writing the plain name is enough; unknown titles are shown as stored.
 
 ## Plan document
 

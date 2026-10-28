@@ -15,8 +15,8 @@ const Cloud=(function(){
   ];
   let auth=null, db=null, user=null, activeUid=null;
   let authReady=false, planReady=false, plan=null;
-  let planUnsub=null, userUnsub=null, progUnsub=null, reqUnsub=null, intakeUnsub=null;
-  let program=null, planRequest=null;
+  let planUnsub=null, userUnsub=null, progUnsub=null, reqUnsub=null, intakeUnsub=null, weekUnsub=null;
+  let program=null, planRequest=null, schedulePlansMap={};
   let shortcutDocSpent=false, shortcutUid=null, intakeBusy=false, shortcutBlocked=false;
   let draftTimer=null;
   let pushTimer=null, paused=false, migrating=false, pendingPull=false;
@@ -224,11 +224,28 @@ const Cloud=(function(){
 
   function stopListen(){
     if(planUnsub) planUnsub();
+    if(weekUnsub) weekUnsub();
     if(userUnsub) userUnsub();
     if(progUnsub) progUnsub();
     if(reqUnsub) reqUnsub();
     if(intakeUnsub) intakeUnsub();
-    planUnsub=userUnsub=progUnsub=reqUnsub=intakeUnsub=null;
+    planUnsub=userUnsub=progUnsub=reqUnsub=intakeUnsub=weekUnsub=null;
+    schedulePlansMap={};
+  }
+  function schedulePlans(){
+    const out=Object.assign({}, schedulePlansMap);
+    if(plan && plan.date){
+      const cur=Object.assign({date:plan.date}, out[plan.date]||{});
+      if(!cur.title && plan.title) cur.title=plan.title;
+      if(!cur.status && plan.status) cur.status=plan.status;
+      out[plan.date]=cur;
+    }
+    return out;
+  }
+  function programDoc(){
+    if(program) return program;
+    if(typeof S!=="undefined" && S.program) return S.program;
+    return null;
   }
 
   function intakeContext(){
@@ -404,6 +421,21 @@ const Cloud=(function(){
       }
       notify();
     }, ()=>{ planReady=true; status="offline"; notify(); });
+    let endDate=date;
+    try{ endDate=Logic.addIsoDays(date, 6)||date; }catch(e){}
+    weekUnsub=userRef().collection("plans")
+      .where(firebase.firestore.FieldPath.documentId(), ">=", date)
+      .where(firebase.firestore.FieldPath.documentId(), "<=", endDate)
+      .onSnapshot(snap=>{
+        const next={};
+        snap.forEach(doc=>{
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(doc.id)) return;
+          const data=doc.data()||{};
+          next[doc.id]={date:doc.id, title:data.title||"", status:data.status||""};
+        });
+        schedulePlansMap=next;
+        notify();
+      }, ()=>{});
     userUnsub=userRef().onSnapshot(snap=>{
       if(!snap.exists || migrating || blocked) return;
       const data=snap.data()||{};
@@ -414,7 +446,7 @@ const Cloud=(function(){
     }, ()=>{ status="offline"; notify(); });
     progUnsub=userRef().collection("program").doc("current").onSnapshot(snap=>{
       program=snap.exists ? (snap.data()||{}) : null;
-      if(program) S.program=program;
+      S.program=program;
       persist();
       notify();
     }, ()=>{});
@@ -709,6 +741,7 @@ const Cloud=(function(){
     emailSignIn, emailCreate, signOut, useLiveCloud, accountSection,
     uid, signedIn, authSettled, planResolved, todayPlan, blockedMessage, statusText, emulatorOn,
     intakeContext, saveIntakeDraft, submitIntake, dismissIntake, awaitingPlan, upcomingDays,
+    schedulePlans, programDoc,
     set onChange(fn){ handler=fn; },
     get onChange(){ return handler; }
   };

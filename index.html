@@ -72,7 +72,6 @@ function gateForToday(){
   const wd=new Date().getDay();
   return (wd>=1&&wd<=5)?wd-1:(wd===6?5:6);
 }
-const DAYLBL=["MON","TUE","WED","THU","FRI","SAT","SUN"];
 function trainWeek(){ return Math.floor(dayDiff(S.trainStart||todayStr(), todayStr())/7)+1; }
 function isDeload(){
   const plan=window.Cloud && Cloud.todayPlan && Cloud.todayPlan();
@@ -740,7 +739,7 @@ function vQuest(){
   }
 
   document.getElementById("view").innerHTML = storeWarn + cloudWarn + coachWait + deloadBanner + decayHtml + shieldHtml + penHtml + dailyHtml
-    + gatePanel(t) + coachScheduleHtml() + schedulePanel() + bkHtml;
+    + gatePanel(t) + schedulePanel() + bkHtml;
 }
 
 /* ---------- gate panel + schedule ---------- */
@@ -834,25 +833,32 @@ function gatePanel(t){
   return `<div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>DUNGEON GATE</div>
       <div class="pbody">${inner}</div></div>`;
 }
-function coachScheduleHtml(){
-  if(!window.Cloud || !Cloud.upcomingDays) return "";
-  const days=Cloud.upcomingDays();
-  if(!days.length) return "";
-  const today=todayStr();
-  return `<div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>COACH SCHEDULE</div>
-      <div class="pbody">${days.map(d=>`<div class="goalrow">
-        <span class="gname" style="${d.date===today?"color:#fff;text-shadow:0 0 8px var(--p)":""}">${d.date===today?"▶ ":""}${esc(d.date)} — ${esc(d.title)}</span>
-        <span class="gval">${d.date===today?"TODAY":"UPCOMING"}</span></div>`).join("")}
-        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Today's dungeon uses the coach plan when one is published. Later days stay on the standard week until their plan arrives.</div>
-      </div></div>`;
+function standardDayName(i){
+  const pl=planFor(i);
+  let name=gateLabel(pl);
+  if(pl.t==="lift" && LIFTS[pl.key] && LIFTS[pl.key].ab.length>1)
+    name+=" ("+(S.gateV[pl.key]?"B":"A")+")";
+  return name;
 }
 function schedulePanel(){
-  const gi=gateForToday();
-  return `<div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>WEEKLY SCHEDULE</div>
-      <div class="pbody">${weekPlan().map((pl,i)=>`<div class="goalrow">
-        <span class="gname" style="${i===gi?'color:#fff;text-shadow:0 0 8px var(--p)':''}">${i===gi?"▶ ":""}${DAYLBL[i]} — ${gateLabel(planFor(i))}${pl.t==="lift"&&LIFTS[pl.key].ab.length>1?" ("+(S.gateV[pl.key]?"B":"A")+" next)":""}</span>
-        <span class="gval">${gateKind(pl)}</span></div>`).join("")}
-        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Gates open only on their day. One raid per day.${(window.Cloud&&Cloud.todayPlan&&Cloud.todayPlan())?" Today is a coach plan — this week is the fallback.":""}</div></div></div>`;
+  const plans=(window.Cloud && Cloud.schedulePlans) ? Cloud.schedulePlans() : {};
+  const program=(window.Cloud && Cloud.programDoc) ? Cloud.programDoc() : (S.program||null);
+  const rows=Logic.weekAhead({
+    today:todayStr(),
+    plans:plans,
+    program:program,
+    weekNames:[0,1,2,3,4,5,6].map(standardDayName),
+    doneDate:S.lastDone||""
+  });
+  const body=rows.map(r=>{
+    const hot=r.today?' style="color:#fff;text-shadow:0 0 8px var(--p)"':'';
+    return `<div class="goalrow">
+      <span class="gname"${hot}>${r.today?"▶ ":""}${esc(r.label)} <span class="muted" style="font-size:10px">${esc(r.when)}</span>
+        <span style="display:block;margin-top:2px">${esc(r.name)}</span></span>
+      <span class="gval">${esc(r.status)}</span></div>`;
+  }).join("");
+  return `<div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>NEXT 7 DAYS</div>
+      <div class="pbody">${body}</div></div>`;
 }
 function bonusKeyFor(pl){
   if(pl.bon) return pl.bon;

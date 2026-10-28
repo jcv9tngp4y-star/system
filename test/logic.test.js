@@ -328,3 +328,125 @@ test("Adam's export migrates without other guild names", ()=>{
   assert.deepEqual(payload.user.gateV, S.gateV);
   assert.equal(payload.user.fastTarget, S.fastTarget);
 });
+
+test("old coach titles become plain workout names", ()=>{
+  assert.equal(Logic.friendlyWorkoutName("Ramp-in · Lower — Hinge"), "Legs (deadlift day)");
+  assert.equal(Logic.friendlyWorkoutName("Lower — Hinge"), "Legs (deadlift day)");
+  assert.equal(Logic.friendlyWorkoutName("Lower B — Hinge"), "Legs (deadlift day)");
+  assert.equal(Logic.friendlyWorkoutName("Lower A — Squat"), "Legs (squat day)");
+  assert.equal(Logic.friendlyWorkoutName("Lower (squat focus)"), "Legs (squat day)");
+  assert.equal(Logic.friendlyWorkoutName("Ramp-in · Upper Pull + Shoulders"), "Back, biceps & shoulders");
+  assert.equal(Logic.friendlyWorkoutName("Upper Push"), "Chest, shoulders & triceps");
+  assert.equal(Logic.friendlyWorkoutName("Conditioning + Basketball + Core"), "Cardio, basketball & abs");
+  assert.equal(Logic.friendlyWorkoutName("Legs (squat day)"), "Legs (squat day)");
+  assert.equal(Logic.friendlyWorkoutName("Push — shoulder-friendly"), "Push — shoulder-friendly");
+  assert.equal(Logic.friendlyWorkoutName("Ramp-in · Easy bike"), "Easy bike");
+  assert.equal(Logic.friendlyWorkoutName(""), "");
+});
+
+test("the next seven days prefer a plan, then the program, then the week", ()=>{
+  const week = [
+    "LOWER (POSTERIOR FOCUS)",
+    "PUSH",
+    "PULL",
+    "LEGS (QUAD FOCUS)",
+    "UPPER",
+    "RECOVERY — HIPS & LOWER",
+    "RECOVERY — UPPER & CLIMB PREP"
+  ];
+  const program = {
+    startDate: "2026-10-27",
+    weeks: 8,
+    days: [
+      {date:"2026-10-29", title:"Ramp-in · Lower — Hinge"},
+      {date:"2026-10-30", title:"Ramp-in · Upper Pull + Shoulders"},
+      {date:"2026-11-02", title:"Lower A — Squat"},
+      {date:"2026-11-03", title:"Upper Push"},
+      {date:"2026-11-04", title:"Conditioning + Basketball + Core"},
+      {date:"2026-11-05", title:"Lower B — Hinge"},
+      {date:"2026-11-06", title:"Upper Pull + Shoulders"}
+    ]
+  };
+  const rows = Logic.weekAhead({
+    today: "2026-10-28",
+    plans: {
+      "2026-10-30": {title:"Legs (deadlift day)", status:"published"}
+    },
+    program,
+    weekNames: week,
+    doneDate: ""
+  });
+  assert.equal(rows.length, 7);
+  assert.deepEqual(rows.map(r=>r.date), [
+    "2026-10-28","2026-10-29","2026-10-30","2026-10-31","2026-11-01","2026-11-02","2026-11-03"
+  ]);
+  assert.deepEqual(rows.map(r=>r.label), ["Today · Wed","Thu","Fri","Sat","Sun","Mon","Tue"]);
+  assert.equal(rows[0].when, "Oct 28");
+  assert.equal(rows[1].when, "Oct 29");
+  assert.equal(rows[0].today, true);
+  assert.equal(rows[1].today, false);
+  assert.equal(rows[0].name, "Rest");
+  assert.equal(rows[0].status, "REST");
+  assert.equal(rows[1].name, "Legs (deadlift day)");
+  assert.equal(rows[1].status, "UPCOMING");
+  assert.equal(rows[2].name, "Legs (deadlift day)");
+  assert.equal(rows[2].status, "UPCOMING");
+  assert.equal(rows[3].name, "Rest");
+  assert.equal(rows[3].status, "REST");
+  assert.equal(rows[4].name, "Rest");
+  assert.equal(rows[5].name, "Legs (squat day)");
+  assert.equal(rows[6].name, "Chest, shoulders & triceps");
+  assert.ok(rows.every(r=>!/^\d{4}-\d{2}-\d{2}$/.test(r.label)));
+
+  const done = Logic.weekAhead({
+    today: "2026-10-29",
+    plans: {"2026-10-29": {title:"Lower — Hinge", status:"completed"}},
+    program,
+    weekNames: week,
+    doneDate: "2026-10-29"
+  });
+  assert.equal(done[0].label, "Today · Thu");
+  assert.equal(done[0].name, "Legs (deadlift day)");
+  assert.equal(done[0].status, "DONE");
+  assert.equal(done[1].name, "Back, biceps & shoulders");
+
+  const skipped = Logic.weekAhead({
+    today: "2026-10-28",
+    plans: {"2026-11-02": {title:"Lower A — Squat", status:"skipped"}},
+    program,
+    weekNames: week
+  });
+  assert.equal(skipped[5].status, "DONE");
+
+  const openToday = Logic.weekAhead({
+    today: "2026-10-29",
+    plans: {},
+    program,
+    weekNames: week,
+    doneDate: "2026-10-28"
+  });
+  assert.equal(openToday[0].status, "TODAY");
+
+  const after = Logic.weekAhead({
+    today: "2027-01-01",
+    plans: {},
+    program,
+    weekNames: week
+  });
+  assert.equal(after[0].label, "Today · Fri");
+  assert.equal(after[0].name, "UPPER");
+  assert.equal(after[0].status, "TODAY");
+  assert.equal(after[1].name, "RECOVERY — HIPS & LOWER");
+  assert.equal(after[1].status, "UPCOMING");
+
+  const plain = Logic.weekAhead({
+    today: "2026-10-28",
+    plans: {},
+    program: null,
+    weekNames: week
+  });
+  assert.equal(plain[0].name, "PULL");
+  assert.equal(plain[0].status, "TODAY");
+  assert.equal(plain[3].name, "RECOVERY — HIPS & LOWER");
+  assert.equal(plain[3].status, "UPCOMING");
+});
