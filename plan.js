@@ -134,7 +134,7 @@ function planCardioCard(b, bi){
     ${b.note?`<div class="muted" style="font-size:10px;margin-bottom:4px">${esc(b.note)}</div>`:""}
     <div class="setrow ${b.done?"done":""}">
       <span class="setnum">${b.done?"✓":"1"}</span>
-      <input class="cin" style="width:72px" type="number" inputmode="decimal" value="${b.actualMin}" oninput="planCardioMin(${bi}, this.value)">
+      <input class="cin" style="width:72px" type="text" inputmode="decimal" autocomplete="off" value="${b.actualMin==null?"":b.actualMin}" oninput="planCardioMin(${bi}, this.value)">
       <span class="xmark">min</span>
       <button class="chk" onclick="planCardioTog(${bi})">✓</button>
       <button class="skipbtn" onclick="planCardioSkip(${bi})">${b.skipped?"UNDO":"SKIP"}</button>
@@ -143,13 +143,13 @@ function planCardioCard(b, bi){
 function planSkillCard(b, bi){
   const body=b.mode==="timed"
     ? `<div class="setrow ${b.done?"done":""}"><span class="setnum">${b.done?"✓":"1"}</span>
-        <input class="cin" style="width:80px" type="number" inputmode="numeric" value="${b.actualSec}" oninput="planSkillSec(${bi}, this.value)">
+        <input class="cin" style="width:80px" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${b.actualSec==null?"":b.actualSec}" oninput="planSkillSec(${bi}, this.value)">
         <span class="xmark">sec${b.seconds!=null?" / "+b.seconds:""}</span>
         <button class="chk" onclick="planSkillTog(${bi})">✓</button></div>`
     : `<div class="setrow ${b.done?"done":""}"><span class="setnum">${b.done?"✓":"1"}</span>
-        <input class="cin" style="width:64px" type="number" inputmode="numeric" value="${b.makes}" oninput="planSkillMakes(${bi}, this.value)">
+        <input class="cin" style="width:64px" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${b.makes==null?"":b.makes}" oninput="planSkillMakes(${bi}, this.value)">
         <span class="xmark">made</span>
-        <input class="cin" style="width:64px" type="number" inputmode="numeric" value="${b.attempts}" oninput="planSkillAtt(${bi}, this.value)">
+        <input class="cin" style="width:64px" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${b.attempts==null?"":b.attempts}" oninput="planSkillAtt(${bi}, this.value)">
         <span class="xmark">att${b.targetMakes!=null?" / "+b.targetMakes:""}</span>
         <button class="chk" onclick="planSkillTog(${bi})">✓</button></div>`;
   return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.name||"Skill")}</span><span class="extag">${b.mode==="timed"?"TIMED":"MADE / ATTEMPTED"}</span></div>
@@ -160,11 +160,9 @@ function planSkillCard(b, bi){
 
 function planEditW(bi,i){
   const s=S.session.blocks[bi].sets[i];
-  const v=prompt("Weight for this set (lb, negative = assist):", s.w);
-  if(v===null) return;
-  const w=parseFloat(v);
-  if(!isFinite(w)) return;
-  s.w=w; s.at=planNow(); save(); vWorkout();
+  askWeight(s.w, function(w){
+    s.w=w; s.at=planNow(); save(); vWorkout();
+  });
 }
 function planAdj(bi,i,d){
   const s=S.session.blocks[bi].sets[i];
@@ -198,16 +196,32 @@ function planStretchTog(bi,ii,i){
   it.checks[i]=!it.checks[i];
   it.at=planNow(); save(); vWorkout();
 }
-function planCardioMin(bi,v){ S.session.blocks[bi].actualMin=v===""?0:parseFloat(v); save(); }
+function planCardioMin(bi,v){
+  const n=parseNum(v);
+  S.session.blocks[bi].actualMin=(String(v).trim()==="" || !isFinite(n)) ? 0 : n;
+  save();
+}
 function planCardioTog(bi){
   const b=S.session.blocks[bi]; b.done=!b.done; if(b.done) b.skipped=false; b.at=planNow(); save(); vWorkout();
 }
 function planCardioSkip(bi){
   const b=S.session.blocks[bi]; b.skipped=!b.skipped; if(b.skipped) b.done=false; b.at=planNow(); save(); vWorkout();
 }
-function planSkillSec(bi,v){ S.session.blocks[bi].actualSec=v===""?0:parseFloat(v); save(); }
-function planSkillMakes(bi,v){ S.session.blocks[bi].makes=v===""?0:parseInt(v,10)||0; save(); }
-function planSkillAtt(bi,v){ S.session.blocks[bi].attempts=v===""?0:parseInt(v,10)||0; save(); }
+function planSkillSec(bi,v){
+  const n=parseWhole(v);
+  S.session.blocks[bi].actualSec=(String(v).trim()==="" || !isFinite(n)) ? 0 : n;
+  save();
+}
+function planSkillMakes(bi,v){
+  const n=parseWhole(v);
+  S.session.blocks[bi].makes=(String(v).trim()==="" || !isFinite(n)) ? 0 : n;
+  save();
+}
+function planSkillAtt(bi,v){
+  const n=parseWhole(v);
+  S.session.blocks[bi].attempts=(String(v).trim()==="" || !isFinite(n)) ? 0 : n;
+  save();
+}
 function planSkillTog(bi){
   const b=S.session.blocks[bi]; b.done=!b.done; if(b.done) b.skipped=false; b.at=planNow(); save(); vWorkout();
 }

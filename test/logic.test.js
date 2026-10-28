@@ -15,6 +15,19 @@ function setsAt(weight, reps, n, planned){
   }));
 }
 
+test("numeric entry accepts a comma and treats empty as blank", ()=>{
+  assert.equal(Logic.parseNum(""), NaN);
+  assert.equal(Logic.parseNum("  "), NaN);
+  assert.equal(Logic.parseNum("-"), NaN);
+  assert.equal(Logic.parseNum("180,5"), 180.5);
+  assert.equal(Logic.parseNum("-40"), -40);
+  assert.equal(Logic.parseNum("135."), 135);
+  assert.equal(Logic.parseWhole(""), NaN);
+  assert.equal(Logic.parseWhole("12,9"), 12);
+  assert.equal(Logic.parseWhole("8"), 8);
+  assert.equal(Logic.parseWhole("0"), 0);
+});
+
 test("deload prompt and active deload are not the same condition", ()=>{
   const week = {profileDeload:true, trainWeek:8, deloadWk:null, deloadSkip:null, hasPlan:false, authPending:false};
   assert.equal(Logic.shouldPromptDeload(week), true);

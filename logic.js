@@ -7,6 +7,21 @@ function round5a(w){ return Math.round(w/5)*5; }
 function e1rm(w,r){ return (Number(w)||0)*(1+(Number(r)||0)/30); }
 function fw(w){ return w<0 ? Math.abs(w)+" lb assist" : w+" lb"; }
 
+/* iOS keypads can insert a comma as the decimal mark. Empty and half-typed
+   values stay NaN so callers can leave the field blank. */
+function parseNum(v){
+  if(v==null) return NaN;
+  const s=String(v).trim().replace(",",".");
+  if(s==="" || s==="-" || s==="+" || s==="." || s==="-." || s==="+.") return NaN;
+  const n=parseFloat(s);
+  return n;
+}
+function parseWhole(v){
+  const n=parseNum(v);
+  if(!isFinite(n)) return NaN;
+  return Math.trunc(n);
+}
+
 /* Calendar deload is every 8th training week (8, 16, 24…), and only after
    the athlete accepts it. The prompt must use the week check WITHOUT the
    acceptance flag — folding both into one predicate made the prompt unreachable. */
@@ -277,7 +292,7 @@ function buildPlanSession(plan, nowIso){
 }
 
 const Logic={
-  round5, round5a, e1rm, fw,
+  round5, round5a, e1rm, fw, parseNum, parseWhole,
   isCalendarDeloadWeek, shouldPromptDeload, isDeloadActive,
   representativeWeight, progressExercise, setsRecord, normalizePlan, buildPlanSession
 };
