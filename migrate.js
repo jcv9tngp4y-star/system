@@ -10,7 +10,7 @@ const USER_KEYS=["level","xp","totalXp","quests","cardioDone","tonnage","streak"
   "workStreak","workBestStreak","lastDone","lastWeighXp","name","profile","gateV","cardioLvl",
   "recDone","trainStart","deloadWk","deloadSkip","theme","shield","fastTarget","fastStart",
   "fastXpD","fastLog","rpeLog",  "recBonusD","lbOpt","lbId","daily","fx714","fxFast1","tz",
-  "intakeDismissedAt","hunterShortcutSpent","intakeSubmittedAt"];
+  "intakeDismissedAt","hunterShortcutSpent","intakeSubmittedAt","quest"];
 
 /* Older builds named a few stretches differently than programs.js does now. */
 const NAME_ALIASES={

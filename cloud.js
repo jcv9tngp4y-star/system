@@ -238,6 +238,9 @@ const Cloud=(function(){
       const cur=Object.assign({date:plan.date}, out[plan.date]||{});
       if(!cur.title && plan.title) cur.title=plan.title;
       if(!cur.status && plan.status) cur.status=plan.status;
+      if(!cur.notes && plan.notes) cur.notes=plan.notes;
+      if(cur.deload==null) cur.deload=!!plan.deload;
+      if(!Array.isArray(cur.blocks) || !cur.blocks.length) cur.blocks=plan.blocks||[];
       out[plan.date]=cur;
     }
     return out;
@@ -431,7 +434,14 @@ const Cloud=(function(){
         snap.forEach(doc=>{
           if(!/^\d{4}-\d{2}-\d{2}$/.test(doc.id)) return;
           const data=doc.data()||{};
-          next[doc.id]={date:doc.id, title:data.title||"", status:data.status||""};
+          next[doc.id]={
+            date:doc.id,
+            title:data.title||"",
+            status:data.status||"",
+            notes:data.notes||"",
+            deload:!!data.deload,
+            blocks:Array.isArray(data.blocks)?data.blocks:[]
+          };
         });
         schedulePlansMap=next;
         notify();
