@@ -449,4 +449,108 @@ test("the next seven days prefer a plan, then the program, then the week", ()=>{
   assert.equal(plain[0].status, "TODAY");
   assert.equal(plain[3].name, "RECOVERY — HIPS & LOWER");
   assert.equal(plain[3].status, "UPCOMING");
+  assert.equal(plain[0].source, "week");
+  assert.equal(rows[0].source, "rest");
+  assert.equal(rows[1].source, "program");
+});
+
+test("daily quest rises once a week and holds under four clears", ()=>{
+  const hunter = {
+    repBase:50, repCap:100,
+    timed:[{n:"Run", base:15, cap:30, per:6, kind:"run", dist:true}]
+  };
+  const curve = Logic.questCurve(hunter);
+  assert.deepEqual(curve.reps, {start:15, step:5, cap:100});
+  assert.equal(curve.timed[0].start, 5);
+  assert.equal(curve.timed[0].step, 1);
+  assert.equal(curve.timed[0].cap, 30);
+
+  const joy = Logic.questCurve({
+    repBase:20, repCap:50,
+    timed:[{n:"Plank", base:2, cap:6, kind:"plank"}]
+  });
+  assert.equal(joy.reps.start, 6);
+  assert.equal(joy.reps.step, 2);
+  assert.equal(joy.reps.cap, 50);
+  assert.equal(joy.timed[0].start, 1);
+  assert.equal(joy.timed[0].cap, 6);
+
+  const fresh = Logic.settleQuest(null, "2026-10-28", curve);
+  assert.equal(fresh.startDate, "2026-10-29");
+  assert.equal(fresh.reps, 15);
+  assert.equal(fresh.timed.run, 5);
+  assert.equal(fresh.pace, "standard");
+  const before = Logic.questStatus(fresh, "2026-10-28", curve);
+  assert.equal(before.week, 0);
+  const week1 = Logic.questStatus(Logic.settleQuest(fresh, "2026-10-29", curve), "2026-10-29", curve);
+  assert.equal(week1.week, 1);
+  assert.equal(week1.reps, 15);
+  assert.equal(week1.nextReps, 20);
+  assert.equal(week1.nextTimed[0].value, 6);
+  assert.equal(Logic.questStatus(fresh, "2026-11-04", curve).week, 1);
+  assert.equal(Logic.questStatus(fresh, "2026-11-05", curve).week, 2);
+
+  let q = fresh;
+  for(const d of ["2026-10-29","2026-10-30","2026-10-31","2026-11-01"]){
+    q = Logic.recordQuestClear(q, d, curve);
+  }
+  assert.equal(Logic.settleQuest(q, "2026-11-04", curve).reps, 15);
+  assert.equal(Logic.settleQuest(q, "2026-11-04", curve).timed.run, 5);
+  const bumped = Logic.settleQuest(q, "2026-11-05", curve);
+  assert.equal(bumped.reps, 20);
+  assert.equal(bumped.timed.run, 6);
+  assert.equal(Logic.settleQuest(bumped, "2026-11-05", curve).reps, 20);
+
+  let held = fresh;
+  for(const d of ["2026-10-29","2026-10-30","2026-10-31"]) held = Logic.recordQuestClear(held, d, curve);
+  const still = Logic.settleQuest(held, "2026-11-05", curve);
+  assert.equal(still.reps, 15);
+  assert.equal(still.timed.run, 5);
+
+  const nudged = Logic.nudgeQuest(fresh, curve, 1);
+  assert.equal(nudged.reps, 20);
+  assert.equal(nudged.timed.run, 6);
+  const down = Logic.nudgeQuest(nudged, curve, -1);
+  assert.equal(down.reps, 15);
+  assert.equal(down.timed.run, 5);
+
+  const capped = Logic.settleQuest({
+    startDate:"2026-10-29", pace:"standard", reps:100, timed:{run:30},
+    clears:["2026-11-05","2026-11-06","2026-11-07","2026-11-08"],
+    settledThrough:"2026-10-28"
+  }, "2026-11-12", curve);
+  assert.equal(capped.reps, 100);
+  assert.equal(capped.timed.run, 30);
+
+  const restarted = Logic.restartQuest("2026-12-01", curve);
+  assert.equal(restarted.startDate, "2026-12-01");
+  assert.equal(restarted.reps, 15);
+  assert.equal(restarted.timed.run, 5);
+  assert.deepEqual(restarted.clears, []);
+  assert.equal(Logic.recordQuestClear(restarted, "2026-11-30", curve).clears.length, 0);
+});
+
+test("a published plan previews as read-only blocks", ()=>{
+  const view = Logic.planPreview({
+    title:"Upper Push",
+    notes:"Stop if the shoulder bites.",
+    status:"published",
+    blocks:[
+      {type:"lift", exerciseId:"bench", name:"Barbell Bench Press", sets:[
+        {weight:150, repsLo:6, repsHi:8},
+        {weight:140, repsLo:8, repsHi:10}
+      ]},
+      {type:"prehab", exerciseId:"rpec", name:"Doorway Pec Stretch", sets:2, sec:45, perSide:true},
+      {type:"cardio", name:"Easy bike", minutes:20},
+      {type:"skill", exerciseId:"ft", name:"Free throws", mode:"made", targetMakes:20}
+    ]
+  });
+  assert.equal(view.title, "Chest, shoulders & triceps");
+  assert.equal(view.notes, "Stop if the shoulder bites.");
+  assert.equal(view.blocks[0].lines[0], "150 lb × 6–8");
+  assert.equal(view.blocks[0].lines[1], "140 lb × 8–10");
+  assert.match(view.blocks[1].lines[0], /Doorway Pec Stretch · 2×45s · L\/R/);
+  assert.deepEqual(view.blocks[2].lines, ["20 min"]);
+  assert.equal(view.blocks[3].lines[0], "made · 20 makes");
+  assert.equal(Logic.planPreview({title:"Empty", blocks:[]}), null);
 });

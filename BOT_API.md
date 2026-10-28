@@ -337,7 +337,7 @@ Calendar deloads are every 8th training week (8, 16, 24…) for profiles with `d
 
 | Path | Contents |
 | --- | --- |
-| `users/{uid}` | Profile, name, level, xp, streaks, `gateV`, `cardioLvl`, `daily`, `theme`, `tz`, `trainStart`, `deloadWk`, `deloadSkip`, `fastLog`, `schemaVersion`, `migratedAt`, `updatedAt`, `coachStatus`, `intakeDismissedAt`, `hunterShortcutSpent`. `coachStatus` is not part of the phone's ordinary save, so a bot update of it is not overwritten by the next set logged. |
+| `users/{uid}` | Profile, name, level, xp, streaks, `gateV`, `cardioLvl`, `daily`, `quest`, `theme`, `tz`, `trainStart`, `deloadWk`, `deloadSkip`, `fastLog`, `schemaVersion`, `migratedAt`, `updatedAt`, `coachStatus`, `intakeDismissedAt`, `hunterShortcutSpent`. `quest` is the daily-quest ramp (`startDate`, current levels, `pace`) and syncs with the phone. `coachStatus` is not part of the phone's ordinary save, so a bot update of it is not overwritten by the next set logged. Leave `quest` in place if you merge the user document. |
 | `users/{uid}/exercises/{exerciseId}` | `calibrated`, `weight`, `fails`, `best`, `base`, `updatedAt`. |
 | `users/{uid}/stretch/{stretchId}` | `{ "n": <times cleared>, "updatedAt" }` — fallback stretch progression only. |
 | `users/{uid}/bodyweight/{YYYY-MM-DD}` | `{ "lbs", "updatedAt" }`. |

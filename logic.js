@@ -392,15 +392,24 @@ function weekAhead(opts){
     const hasPlan=!!(plan && typeof plan==="object");
     let name="";
     let planStatus="";
+    let source="week";
     if(hasPlan){
       planStatus=plan.status||"";
       name=friendlyWorkoutName(plan.title)||"Training";
+      source="plan";
     } else if(range && date>=range.start && date<range.end){
       const raw=programTitle(program, date);
-      name=raw ? (friendlyWorkoutName(raw)||"Training") : "Rest";
+      if(raw){
+        name=friendlyWorkoutName(raw)||"Training";
+        source="program";
+      } else {
+        name="Rest";
+        source="rest";
+      }
     } else {
       const raw=weekNames[wd]||"";
       name=raw ? (friendlyWorkoutName(raw)||"Rest") : "Rest";
+      if(name==="Rest") source="rest";
     }
     const isToday=date===today;
     let status="UPCOMING";
@@ -413,16 +422,198 @@ function weekAhead(opts){
       label:isToday ? "Today · "+WEEKDAY_SHORT[wd] : WEEKDAY_SHORT[wd],
       when:monthDay(date),
       name:name,
-      status:status
+      status:status,
+      wd:wd,
+      source:source
     });
   }
   return rows;
+}
+
+/* Daily quest ramp. Levels move once a week, and only after a week with
+   at least 4 clears. The first week is anchored on 2026-10-29. */
+const QUEST_START="2026-10-29";
+
+function questCurve(profile){
+  const p=profile||{};
+  const oldBase=Number(p.repBase)||50;
+  const oldCap=Number(p.repCap)||100;
+  const repCap=Math.min(100, oldCap);
+  const repStart=Math.max(1, Math.min(repCap, Math.round(15*oldBase/50)));
+  const repStep=Math.max(1, Math.round(5*oldBase/50));
+  const timed=(Array.isArray(p.timed)?p.timed:[]).map(tm=>{
+    const base=Number(tm.base)||0;
+    const cap=Math.min(30, Number(tm.cap)||30);
+    const start=Math.max(1, Math.min(cap, Math.round(5*base/15)));
+    const step=Math.max(1, Math.round(base/15));
+    return {kind:tm.kind||"timed", name:tm.n||"Timed", start, step, cap, dist:!!tm.dist};
+  });
+  return {reps:{start:repStart, step:repStep, cap:repCap}, timed};
+}
+
+function blankQuest(startDate){
+  const start=parseIsoDate(startDate)?startDate:QUEST_START;
+  return {
+    startDate:start,
+    pace:"standard",
+    reps:null,
+    timed:{},
+    clears:[],
+    settledThrough:addIsoDays(start, -1)
+  };
+}
+function cloneQuest(raw){
+  const src=raw && typeof raw==="object" ? raw : blankQuest();
+  const start=parseIsoDate(src.startDate)?src.startDate:QUEST_START;
+  const timed={};
+  if(src.timed && typeof src.timed==="object"){
+    for(const k of Object.keys(src.timed)){
+      const n=Number(src.timed[k]);
+      if(isFinite(n)) timed[k]=n;
+    }
+  }
+  const clears=Array.isArray(src.clears) ? src.clears.filter(d=>parseIsoDate(d)!=null) : [];
+  return {
+    startDate:start,
+    pace:"standard",
+    reps:src.reps==null || src.reps==="" || !isFinite(Number(src.reps)) ? null : Number(src.reps),
+    timed,
+    clears,
+    settledThrough:parseIsoDate(src.settledThrough)?src.settledThrough:addIsoDays(start, -1)
+  };
+}
+function clampLevel(n, cap){
+  const v=Math.round(Number(n));
+  if(!isFinite(v)) return 1;
+  return Math.max(1, Math.min(cap, v));
+}
+function settleQuest(raw, today, curve){
+  const q=cloneQuest(raw);
+  if(!curve || !curve.reps) return q;
+  if(q.reps==null) q.reps=curve.reps.start;
+  q.reps=clampLevel(q.reps, curve.reps.cap);
+  for(const t of curve.timed){
+    if(q.timed[t.kind]==null) q.timed[t.kind]=t.start;
+    q.timed[t.kind]=clampLevel(q.timed[t.kind], t.cap);
+  }
+  if(parseIsoDate(today)==null || today<q.startDate) return q;
+  let weekStart=q.startDate;
+  for(let guard=0; guard<520; guard++){
+    const weekEnd=addIsoDays(weekStart, 6);
+    if(!weekEnd || weekEnd>=today) break;
+    if(q.settledThrough<weekEnd){
+      let n=0;
+      for(const d of q.clears) if(d>=weekStart && d<=weekEnd) n++;
+      if(n>=4){
+        q.reps=clampLevel(q.reps+curve.reps.step, curve.reps.cap);
+        for(const t of curve.timed){
+          const cur=q.timed[t.kind]==null?t.start:q.timed[t.kind];
+          q.timed[t.kind]=clampLevel(cur+t.step, t.cap);
+        }
+      }
+      q.settledThrough=weekEnd;
+    }
+    weekStart=addIsoDays(weekStart, 7);
+  }
+  return q;
+}
+function recordQuestClear(raw, date, curve){
+  const q=settleQuest(raw, date, curve);
+  if(parseIsoDate(date) && date>=q.startDate && q.clears.indexOf(date)<0) q.clears.push(date);
+  q.clears=q.clears.filter(d=>d>=q.startDate).sort();
+  if(q.clears.length>120) q.clears=q.clears.slice(-120);
+  return q;
+}
+function nudgeQuest(raw, curve, dir){
+  const q=cloneQuest(raw);
+  const sign=dir<0?-1:1;
+  if(!curve || !curve.reps) return q;
+  if(q.reps==null) q.reps=curve.reps.start;
+  q.reps=clampLevel(q.reps+sign*curve.reps.step, curve.reps.cap);
+  for(const t of curve.timed){
+    const cur=q.timed[t.kind]==null?t.start:q.timed[t.kind];
+    q.timed[t.kind]=clampLevel(cur+sign*t.step, t.cap);
+  }
+  return q;
+}
+function restartQuest(today, curve){
+  const start=parseIsoDate(today)?today:QUEST_START;
+  const q=blankQuest(start);
+  q.reps=curve && curve.reps ? curve.reps.start : 15;
+  q.timed={};
+  for(const t of (curve && curve.timed)||[]) q.timed[t.kind]=t.start;
+  return q;
+}
+function questStatus(quest, today, curve){
+  const q=quest||blankQuest();
+  const startMs=parseIsoDate(q.startDate);
+  const todayMs=parseIsoDate(today);
+  const week=(startMs==null || todayMs==null || today<q.startDate)
+    ? 0
+    : Math.floor((todayMs-startMs)/864e5/7)+1;
+  const timed=(curve.timed||[]).map(t=>({
+    kind:t.kind, name:t.name,
+    value:q.timed && q.timed[t.kind]!=null ? q.timed[t.kind] : t.start
+  }));
+  const nextTimed=(curve.timed||[]).map(t=>({
+    kind:t.kind, name:t.name,
+    value:Math.min(t.cap, (q.timed && q.timed[t.kind]!=null ? q.timed[t.kind] : t.start)+t.step)
+  }));
+  const reps=q.reps==null ? curve.reps.start : q.reps;
+  const nextReps=Math.min(curve.reps.cap, reps+curve.reps.step);
+  const atCap=nextReps===reps && nextTimed.every((t,i)=>t.value===timed[i].value);
+  return {week, startDate:q.startDate, reps, nextReps, timed, nextTimed, atCap};
+}
+
+/* Read-only lines for a published plan. Null when the document has nothing to run. */
+function planPreview(raw){
+  const norm=normalizePlan(raw);
+  if(!norm) return null;
+  const blocks=norm.blocks.map(b=>{
+    if(b.type==="lift"){
+      const lines=(b.sets||[]).map(s=>{
+        const lo=s.repsLo, hi=s.repsHi;
+        const range=lo!=null && hi!=null && lo!==hi ? (lo+"–"+hi) : String(hi!=null?hi:(lo!=null?lo:""));
+        let w="BW";
+        if(s.weight!=null && s.weight!=="" && isFinite(Number(s.weight))){
+          const n=Number(s.weight);
+          w=n<0 ? Math.abs(n)+" lb assist" : n+" lb";
+        }
+        return w+" × "+range;
+      });
+      return {type:"lift", name:b.name||b.exerciseId||"Lift", lines};
+    }
+    if(b.type==="stretch"){
+      const lines=(b.items||[]).map(it=>{
+        const dose=it.mode==="reps" ? (it.sets+"×"+(it.reps||0)+" reps") : (it.sets+"×"+(it.sec||0)+"s");
+        return (it.name||it.exerciseId||"Stretch")+" · "+dose+(it.perSide?" · L/R":"");
+      });
+      return {type:"stretch", name:b.title||b.name||"Prehab", lines};
+    }
+    if(b.type==="cardio"){
+      return {type:"cardio", name:b.name||"Cardio", lines:[String(b.minutes||0)+" min"]};
+    }
+    if(b.type==="skill"){
+      const goal=b.mode==="timed"
+        ? ((b.seconds!=null?b.seconds:0)+"s")
+        : (b.targetMakes!=null ? b.targetMakes+" makes" : "makes");
+      return {type:"skill", name:b.name||"Skill", lines:[(b.mode||"skill")+" · "+goal]};
+    }
+    return null;
+  }).filter(Boolean);
+  return {
+    title:friendlyWorkoutName(norm.title)||norm.title||"Coach plan",
+    notes:norm.notes||"",
+    blocks
+  };
 }
 
 const Logic={
   round5, round5a, e1rm, fw, parseNum, parseWhole,
   isCalendarDeloadWeek, shouldPromptDeload, isDeloadActive,
   representativeWeight, progressExercise, setsRecord, normalizePlan, buildPlanSession,
-  addIsoDays, friendlyWorkoutName, weekAhead
+  addIsoDays, friendlyWorkoutName, weekAhead, monthDay,
+  QUEST_START, questCurve, settleQuest, recordQuestClear, nudgeQuest, restartQuest, questStatus,
+  planPreview
 };
 if(typeof module!=="undefined" && module.exports) module.exports=Logic;

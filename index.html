@@ -390,13 +390,30 @@ function saveName(){
 }
 
 /* ---------- daily quest (generalized) ---------- */
-function dqRepTarget(){
-  const p=prof(), c=S.daily.count;
-  return Math.min(p.repCap, p.repBase + Math.floor(c/p.repPer)*p.repStep);
+function questCurve(){ return Logic.questCurve(prof()); }
+function ensureQuest(){
+  const curve=questCurve();
+  const next=Logic.settleQuest(S.quest, todayStr(), curve);
+  if(JSON.stringify(next)!==JSON.stringify(S.quest||null)){ S.quest=next; save(); }
+  else S.quest=next;
+  return S.quest;
 }
+function dqRepTarget(){ return ensureQuest().reps; }
 function dqTimedTarget(tm){
-  const c=S.daily.count;
-  return Math.min(tm.cap, tm.base + Math.floor(c/tm.per));
+  const q=ensureQuest();
+  const v=q.timed && q.timed[tm.kind];
+  return v==null ? tm.base : v;
+}
+function questPaceText(){
+  const q=ensureQuest();
+  const info=Logic.questStatus(q, todayStr(), questCurve());
+  const nowTimed=info.timed.map(t=>t.name+" "+t.value+" min").join(" · ");
+  const nextTimed=info.nextTimed.map(t=>t.name+" "+t.value+" min").join(" · ");
+  const now=info.reps+" reps"+(nowTimed?" · "+nowTimed:"");
+  if(info.week<1) return "Starts "+Logic.monthDay(info.startDate)+" · "+now;
+  if(info.atCap) return "Week "+info.week+" · at the cap · "+now;
+  const next=info.nextReps+" reps"+(nextTimed?" · "+nextTimed:"");
+  return "Week "+info.week+" · next week "+next+" if 4 days are cleared";
 }
 function dqItems(){
   const p=prof(), r=dqRepTarget();
@@ -422,11 +439,6 @@ function checkStreak(){
       S.shield=0; S.daily.lastComplete=yStr; S.shieldNote=true; save(); return;
     }
     if(S.streak!==0){ S.streak=0; S.missNote=gap-1; }
-    if(gap>=7){
-      const before=S.daily.count;
-      S.daily.count=Math.max(0,S.daily.count-2*(gap-6));
-      if(S.daily.count<before) S.decayNote=`WELCOME BACK — ${gap} DAYS AWAY. TARGETS EASED SO YOU CAN RESTART CLEAN.`;
-    }
     save();
   }
 }
@@ -461,6 +473,7 @@ function completeDaily(){
   const yStr=y.toLocaleDateString("en-CA");
   const prev=S.daily.lastComplete;
   S.daily.lastComplete=t; S.daily.count++;
+  S.quest=Logic.recordQuestClear(S.quest, t, questCurve());
   let streakMsg;
   S.streak = (prev===yStr) ? S.streak+1 : 1;
   if(S.streak>S.bestStreak) S.bestStreak=S.streak;
@@ -731,6 +744,7 @@ function vQuest(){
           </div>`:"")
         + `<div class="muted" style="font-size:10px;text-align:center;margin-top:10px">Count as you go — clears itself when every target is hit · cleared ${S.daily.count}×</div>`;
     }
+    dailyBody+=`<div class="muted" style="font-size:10px;text-align:center;margin-top:8px">${esc(questPaceText())}</div>`;
     dailyHtml=`
       <div class="panel dq">
         <span class="streakchip ${S.streak?'':'zero'}">⚔ ${S.streak} DAY${S.streak===1?"":"S"}${S.shield?" 🛡":""}</span>
@@ -852,13 +866,107 @@ function schedulePanel(){
   });
   const body=rows.map(r=>{
     const hot=r.today?' style="color:#fff;text-shadow:0 0 8px var(--p)"':'';
-    return `<div class="goalrow">
+    return `<div class="goalrow" onclick="previewDay('${r.date}')" style="cursor:pointer">
       <span class="gname"${hot}>${r.today?"▶ ":""}${esc(r.label)} <span class="muted" style="font-size:10px">${esc(r.when)}</span>
         <span style="display:block;margin-top:2px">${esc(r.name)}</span></span>
       <span class="gval">${esc(r.status)}</span></div>`;
   }).join("");
   return `<div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>NEXT 7 DAYS</div>
       <div class="pbody">${body}</div></div>`;
+}
+function previewClose(){ return `<button class="btn ghost" onclick="closeModal()">CLOSE</button>`; }
+function previewWeight(e){
+  if(e.bw) return "bodyweight";
+  const st=S.ex && S.ex[e.id];
+  if(st && st.calibrated) return fw(isDeload()?deloadW(st.weight):st.weight);
+  return "not calibrated";
+}
+function previewWeekHtml(row){
+  const pl=planFor(row.wd);
+  const bits=[];
+  const program=(window.Cloud && Cloud.programDoc) ? Cloud.programDoc() : (S.program||null);
+  const note=(program && Array.isArray(program.days) ? program.days : []).filter(d=>d && d.date===row.date).map(d=>d.note||"").filter(Boolean).pop();
+  if(note) bits.push(`<div class="muted" style="font-size:11px;margin:6px 0">${esc(note)}</div>`);
+  if(row.source==="program") bits.push(`<div class="muted" style="font-size:11px;margin:6px 0">Until that day's plan is published, this is the usual weekday session.</div>`);
+  if(pl.t==="lift"){
+    const v=S.gateV[pl.key]?1:0;
+    bits.push(liftsFor(pl.key,v).map(e=>`<div class="goalrow"><span class="gname">${esc(e.name)}</span><span class="gval">${e.sets} × ${e.lo}–${e.hi} @ ${esc(previewWeight(e))}</span></div>`).join(""));
+  } else if(pl.t==="cardio"){
+    const c=CARDIO[Math.min(S.cardioLvl,CARDIO.length)-1];
+    const tot=Math.round((c.run+c.walk)*c.rounds);
+    bits.push(`<div class="goalrow"><span class="gname">Warm-up walk</span><span class="gval">5 min</span></div>
+      <div class="goalrow"><span class="gname">${c.walk?`Run ${c.run} min / walk ${c.walk} min`:"Run continuously"}</span><span class="gval">${c.walk?`× ${c.rounds}`:`${c.run} min`}</span></div>
+      <div class="goalrow"><span class="gname">Cool-down walk</span><span class="gval">5 min</span></div>
+      <div class="goalrow"><span class="gname">Total</span><span class="gval">≈ ${tot+10} min</span></div>`);
+  } else if(pl.t==="stretch"){
+    bits.push((SGATES[pl.key]?stretchesFor(pl.key):[]).map(e=>`<div class="goalrow"><span class="gname">${esc(e.name)}</span><span class="gval">${esc(sideShort(e))}</span></div>`).join(""));
+  } else if(pl.t==="pool"){
+    bits.push(POOL_GATES.map(g=>`<div class="goalrow"><span class="gname">${esc(g.lbl)}</span><span class="gval">WEEKEND</span></div>`).join(""));
+  } else if(pl.t==="runsimple" || pl.t==="ph"){
+    bits.push(`<div class="muted" style="font-size:12px;margin:8px 0">${esc(pl.desc||"")}</div>`);
+  } else {
+    return `<h2>REST DAY</h2><div class="muted">${esc(row.label)} · ${esc(row.when)}</div><div style="margin:12px 0">Rest day</div>${previewClose()}`;
+  }
+  return `<h2>${esc(row.name)}</h2>
+    <div class="muted">${esc(row.label)} · ${esc(row.when)}</div>
+    <div style="text-align:left;margin-top:8px">${bits.join("")}</div>
+    ${previewClose()}`;
+}
+function previewPlanHtml(view, row){
+  const blocks=view.blocks.map(b=>{
+    if(b.type==="lift"){
+      const rows=b.lines.map(line=>`<div class="goalrow"><span class="gname">${esc(line)}</span></div>`).join("");
+      const sets=b.lines.length===1?"1 SET":b.lines.length+" SETS";
+      return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.name)}</span><span class="extag">${sets}</span></div>${rows}</div>`;
+    }
+    if(b.type==="stretch"){
+      return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.name)}</span><span class="extag">STRETCH</span></div>${b.lines.map(line=>`<div class="goalrow"><span class="gname">${esc(line)}</span></div>`).join("")}</div>`;
+    }
+    return `<div class="goalrow"><span class="gname">${esc(b.name)}</span><span class="gval">${esc(b.lines.join(" · "))}</span></div>`;
+  }).join("");
+  return `<h2>${esc(view.title)}</h2>
+    <div class="muted">${esc(row.label)} · ${esc(row.when)}</div>
+    ${view.notes?`<div class="muted" style="font-size:11px;margin:8px 0">${esc(view.notes)}</div>`:""}
+    <div style="text-align:left;margin-top:8px">${blocks}</div>
+    ${previewClose()}`;
+}
+function previewDay(date){
+  const plans=(window.Cloud && Cloud.schedulePlans) ? Cloud.schedulePlans() : {};
+  const program=(window.Cloud && Cloud.programDoc) ? Cloud.programDoc() : (S.program||null);
+  const rows=Logic.weekAhead({
+    today:todayStr(),
+    plans:plans,
+    program:program,
+    weekNames:[0,1,2,3,4,5,6].map(standardDayName),
+    doneDate:S.lastDone||""
+  });
+  const row=rows.filter(r=>r.date===date)[0];
+  if(!row) return;
+  const view=plans[date] ? Logic.planPreview(plans[date]) : null;
+  if(view){ modal(previewPlanHtml(view, row)); return; }
+  if(row.source==="rest" || row.name==="Rest"){
+    modal(`<h2>REST DAY</h2><div class="muted">${esc(row.label)} · ${esc(row.when)}</div><div style="margin:12px 0">Rest day</div>${previewClose()}`);
+    return;
+  }
+  modal(previewWeekHtml(row));
+}
+function nudgeQuest(dir){
+  S.quest=Logic.nudgeQuest(ensureQuest(), questCurve(), dir);
+  save();
+  if(curView==="sys") vSys(); else vQuest();
+}
+function confirmRestartQuest(){
+  modal(`<h2>⚠ RESTART QUEST</h2>
+    <div>Reset the daily targets to the starting levels, starting today?</div>
+    <div class="muted" style="font-size:11px;margin-top:6px">Reps go back to the easy start and the run goes back to 5 minutes. This week starts over.</div>
+    <button class="btn danger" onclick="restartQuest()">RESTART QUEST</button>
+    <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
+}
+function restartQuest(){
+  S.quest=Logic.restartQuest(todayStr(), questCurve());
+  save();
+  closeModal();
+  if(curView==="sys") vSys(); else vQuest();
 }
 function bonusKeyFor(pl){
   if(pl.bon) return pl.bon;
@@ -1672,6 +1780,13 @@ function vSys(){
         <div class="sect">DAILY QUESTS</div>
         <div class="muted" style="font-size:11px;line-height:1.6">The small daily checklist (pushups, planks, etc.) separate from your scheduled workouts. Turn it off if an unfinished list sitting there gets in your head — your streak and stats just pause instead of counting against you, and your lift/cardio training is unaffected either way.</div>
         <button class="btn ghost" onclick="S.daily.enabled=!S.daily.enabled;save();vSys()">${S.daily.enabled?"TURN OFF DAILY QUESTS":"TURN ON DAILY QUESTS"}</button>
+        <div class="sect">DAILY QUEST PACE</div>
+        <div class="muted" style="font-size:11px;line-height:1.6">${esc(questPaceText())}. A week moves up only after 4 clears. It never jumps in the middle of a week.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn ghost" style="flex:1" onclick="nudgeQuest(-1)">− LOWER</button>
+          <button class="btn ghost" style="flex:1" onclick="nudgeQuest(1)">+ RAISE</button>
+        </div>
+        <button class="btn ghost" onclick="confirmRestartQuest()">RESTART QUEST</button>
         <div class="sect">SYSTEM COLOUR</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
           ${Object.keys(THEMES).map(k=>`<button onclick="setTheme('${k}')" style="flex:1 1 30%;padding:10px 4px;cursor:pointer;font-family:inherit;font-size:10px;letter-spacing:1px;color:#fff;background:${S.theme===k?THEMES[k].pd:"rgba(0,0,0,.35)"};border:1px solid ${THEMES[k].p};box-shadow:${S.theme===k?"0 0 10px "+THEMES[k].p:"none"}">${THEMES[k].lbl}</button>`).join("")}
