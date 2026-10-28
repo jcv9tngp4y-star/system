@@ -885,9 +885,13 @@ function previewWeekHtml(row){
   const pl=planFor(row.wd);
   const bits=[];
   const program=(window.Cloud && Cloud.programDoc) ? Cloud.programDoc() : (S.program||null);
-  const note=(program && Array.isArray(program.days) ? program.days : []).filter(d=>d && d.date===row.date).map(d=>d.note||"").filter(Boolean).pop();
-  if(note) bits.push(`<div class="muted" style="font-size:11px;margin:6px 0">${esc(note)}</div>`);
-  if(row.source==="program") bits.push(`<div class="muted" style="font-size:11px;margin:6px 0">Until that day's plan is published, this is the usual weekday session.</div>`);
+  const note=(row.source==="program" && program && Array.isArray(program.days) ? program.days : []).filter(d=>d && d.date===row.date).map(d=>d.note||"").filter(Boolean).pop();
+  if(row.source==="program"){
+    return `<h2>${esc(row.name)}</h2>
+      <div class="muted">${esc(row.label)} · ${esc(row.when)}</div>
+      ${note?`<div class="muted" style="font-size:11px;margin:8px 0">${esc(note)}</div>`:""}
+      ${previewClose()}`;
+  }
   if(pl.t==="lift"){
     const v=S.gateV[pl.key]?1:0;
     bits.push(liftsFor(pl.key,v).map(e=>`<div class="goalrow"><span class="gname">${esc(e.name)}</span><span class="gval">${e.sets} × ${e.lo}–${e.hi} @ ${esc(previewWeight(e))}</span></div>`).join(""));
@@ -914,15 +918,12 @@ function previewWeekHtml(row){
 }
 function previewPlanHtml(view, row){
   const blocks=view.blocks.map(b=>{
-    if(b.type==="lift"){
-      const rows=b.lines.map(line=>`<div class="goalrow"><span class="gname">${esc(line)}</span></div>`).join("");
-      const sets=b.lines.length===1?"1 SET":b.lines.length+" SETS";
-      return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.name)}</span><span class="extag">${sets}</span></div>${rows}</div>`;
-    }
-    if(b.type==="stretch"){
-      return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.name)}</span><span class="extag">STRETCH</span></div>${b.lines.map(line=>`<div class="goalrow"><span class="gname">${esc(line)}</span></div>`).join("")}</div>`;
-    }
-    return `<div class="goalrow"><span class="gname">${esc(b.name)}</span><span class="gval">${esc(b.lines.join(" · "))}</span></div>`;
+    const tag=b.optional ? "OPTIONAL" : (b.type==="lift" ? (b.lines.length===1?"1 SET":b.lines.length+" SETS") : (b.type||"block").toUpperCase());
+    const lines=b.lines.map(line=>`<div class="goalrow"><span class="gname">${esc(line)}</span></div>`).join("");
+    const swaps=b.swaps&&b.swaps.length?`<div class="muted" style="font-size:10px">Swap: ${b.swaps.map(esc).join(" · ")}</div>`:"";
+    return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.name)}</span><span class="extag">${esc(tag)}</span></div>
+      ${b.note?`<div class="muted" style="font-size:10px;margin-bottom:4px">${esc(b.note)}</div>`:""}
+      ${lines}${swaps}</div>`;
   }).join("");
   return `<h2>${esc(view.title)}</h2>
     <div class="muted">${esc(row.label)} · ${esc(row.when)}</div>
@@ -942,8 +943,10 @@ function previewDay(date){
   });
   const row=rows.filter(r=>r.date===date)[0];
   if(!row) return;
-  const view=plans[date] ? Logic.planPreview(plans[date]) : null;
-  if(view){ modal(previewPlanHtml(view, row)); return; }
+  if(plans[date]){
+    const view=Logic.planPreview(plans[date]);
+    if(view){ modal(previewPlanHtml(view, row)); return; }
+  }
   if(row.source==="rest" || row.name==="Rest"){
     modal(`<h2>REST DAY</h2><div class="muted">${esc(row.label)} · ${esc(row.when)}</div><div style="margin:12px 0">Rest day</div>${previewClose()}`);
     return;

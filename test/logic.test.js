@@ -549,8 +549,90 @@ test("a published plan previews as read-only blocks", ()=>{
   assert.equal(view.notes, "Stop if the shoulder bites.");
   assert.equal(view.blocks[0].lines[0], "150 lb × 6–8");
   assert.equal(view.blocks[0].lines[1], "140 lb × 8–10");
-  assert.match(view.blocks[1].lines[0], /Doorway Pec Stretch · 2×45s · L\/R/);
+  assert.match(view.blocks[1].lines[0], /Doorway Pec Stretch · 2×45s · per side/);
   assert.deepEqual(view.blocks[2].lines, ["20 min"]);
   assert.equal(view.blocks[3].lines[0], "made · 20 makes");
-  assert.equal(Logic.planPreview({title:"Empty", blocks:[]}), null);
+  const empty = Logic.planPreview({title:"Empty", blocks:[]});
+  assert.equal(empty.title, "Empty");
+  assert.equal(empty.blocks.length, 0);
+  assert.equal(Logic.planPreview(null), null);
+});
+
+test("Oct 29 deadlift plan is shown in full and beats the standard week", ()=>{
+  const plan = {
+    date:"2026-10-29",
+    status:"published",
+    title:"Legs (deadlift day) · easy start",
+    notes:"Easy start. Stop if the back bites.",
+    blocks:[
+      {type:"cardio", name:"Warm-up", minutes:5, note:"easy bike"},
+      {type:"prehab", title:"Shoulder prehab", items:[
+        {name:"Band external rotation", sets:2, reps:15, perSide:true, mode:"reps"},
+        {name:"Wall slides", sets:2, sec:30, mode:"hold"}
+      ]},
+      {type:"lift", exerciseId:"rdl", name:"Romanian Deadlift", sets:[
+        {weight:75, reps:8, note:"warm-up"},
+        {weight:95, reps:8},
+        {weight:95, reps:8}
+      ], swaps:[{exerciseId:"db-rdl", name:"Dumbbell RDL", note:"if the back is cranky"}]},
+      {type:"lift", exerciseId:"hack", name:"Hack Squat", sets:[
+        {weight:90, reps:8},
+        {weight:90, reps:8}
+      ]},
+      {type:"lift", exerciseId:"legcurl", name:"Lying Leg Curl", sets:[
+        {weight:60, reps:10},
+        {weight:60, reps:10}
+      ]},
+      {type:"lift", exerciseId:"exrot", name:"Cable External Rotation", note:"light", sets:[
+        {weight:10, reps:15, perArm:true},
+        {weight:10, reps:15, perArm:true}
+      ]},
+      {type:"stretch", title:"Core", items:[
+        {name:"Dead bug", sets:2, reps:8, perSide:true, mode:"reps", note:"slow"}
+      ]},
+      {type:"skill", name:"Form shooting", mode:"timed", seconds:300, optional:true, note:"only if fresh"},
+      {type:"stretch", title:"Cool-down", items:[
+        {name:"Pigeon", sets:2, sec:45, perSide:true, mode:"hold"}
+      ]}
+    ]
+  };
+  const view = Logic.planPreview(plan);
+  assert.equal(view.blocks.length, 9);
+  assert.equal(view.title, "Legs (deadlift day) · easy start");
+  assert.equal(view.notes, "Easy start. Stop if the back bites.");
+  assert.equal(view.blocks[0].name, "Warm-up");
+  assert.deepEqual(view.blocks[0].lines, ["5 min"]);
+  assert.equal(view.blocks[0].note, "easy bike");
+  assert.equal(view.blocks[1].name, "Shoulder prehab");
+  assert.match(view.blocks[1].lines[0], /Band external rotation · 2×15 reps · per side/);
+  assert.match(view.blocks[1].lines[1], /Wall slides · 2×30s/);
+  assert.equal(view.blocks[2].lines[0], "75 lb × 8 · warm-up");
+  assert.equal(view.blocks[2].lines[1], "95 lb × 8");
+  assert.equal(view.blocks[2].lines[2], "95 lb × 8");
+  assert.deepEqual(view.blocks[2].swaps, ["Dumbbell RDL (if the back is cranky)"]);
+  assert.equal(view.blocks[3].lines[0], "90 lb × 8");
+  assert.equal(view.blocks[3].lines.length, 2);
+  assert.equal(view.blocks[4].lines[0], "60 lb × 10");
+  assert.equal(view.blocks[4].lines.length, 2);
+  assert.equal(view.blocks[5].note, "light");
+  assert.equal(view.blocks[5].lines[0], "10 lb × 15 · per arm");
+  assert.match(view.blocks[6].lines[0], /Dead bug · 2×8 reps · per side · slow/);
+  assert.equal(view.blocks[7].optional, true);
+  assert.equal(view.blocks[7].lines[0], "timed · 300s");
+  assert.equal(view.blocks[7].note, "only if fresh");
+  assert.match(view.blocks[8].lines[0], /Pigeon · 2×45s · per side/);
+
+  const rows = Logic.weekAhead({
+    today:"2026-10-28",
+    plans:{"2026-10-29":plan},
+    program:{
+      startDate:"2026-10-27", weeks:8,
+      days:[{date:"2026-10-29", title:"Ramp-in · Lower — Hinge", note:"RDL, hack squat, leg curl, core, prehab"}]
+    },
+    weekNames:["LOWER (POSTERIOR FOCUS)","PUSH","PULL","LEGS (QUAD FOCUS)","UPPER","RECOVERY","RECOVERY"]
+  });
+  assert.equal(rows[1].date, "2026-10-29");
+  assert.equal(rows[1].source, "plan");
+  assert.equal(rows[1].name, "Legs (deadlift day) · easy start");
+  assert.notEqual(rows[1].name, "LEGS (QUAD FOCUS)");
 });

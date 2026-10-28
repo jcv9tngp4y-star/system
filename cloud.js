@@ -15,7 +15,8 @@ const Cloud=(function(){
   ];
   let auth=null, db=null, user=null, activeUid=null;
   let authReady=false, planReady=false, plan=null;
-  let planUnsub=null, userUnsub=null, progUnsub=null, reqUnsub=null, intakeUnsub=null, weekUnsub=null;
+  let planUnsub=null, userUnsub=null, progUnsub=null, reqUnsub=null, intakeUnsub=null;
+  let weekUnsubs=[];
   let program=null, planRequest=null, schedulePlansMap={};
   let shortcutDocSpent=false, shortcutUid=null, intakeBusy=false, shortcutBlocked=false;
   let draftTimer=null;
@@ -224,24 +225,28 @@ const Cloud=(function(){
 
   function stopListen(){
     if(planUnsub) planUnsub();
-    if(weekUnsub) weekUnsub();
+    weekUnsubs.forEach(fn=>{ try{ fn(); }catch(e){} });
     if(userUnsub) userUnsub();
     if(progUnsub) progUnsub();
     if(reqUnsub) reqUnsub();
     if(intakeUnsub) intakeUnsub();
-    planUnsub=userUnsub=progUnsub=reqUnsub=intakeUnsub=weekUnsub=null;
+    planUnsub=userUnsub=progUnsub=reqUnsub=intakeUnsub=null;
+    weekUnsubs=[];
     schedulePlansMap={};
   }
   function schedulePlans(){
     const out=Object.assign({}, schedulePlansMap);
-    if(plan && plan.date){
-      const cur=Object.assign({date:plan.date}, out[plan.date]||{});
-      if(!cur.title && plan.title) cur.title=plan.title;
-      if(!cur.status && plan.status) cur.status=plan.status;
-      if(!cur.notes && plan.notes) cur.notes=plan.notes;
-      if(cur.deload==null) cur.deload=!!plan.deload;
-      if(!Array.isArray(cur.blocks) || !cur.blocks.length) cur.blocks=plan.blocks||[];
-      out[plan.date]=cur;
+    /* Today's runnable plan can arrive before the per-day listener. Don't
+       replace a stored document with the normalized copy, which drops fields. */
+    if(plan && plan.date && !out[plan.date]){
+      out[plan.date]={
+        date:plan.date,
+        title:plan.title||"",
+        status:plan.status||"",
+        notes:plan.notes||"",
+        deload:!!plan.deload,
+        blocks:plan.blocks||[]
+      };
     }
     return out;
   }
@@ -424,28 +429,22 @@ const Cloud=(function(){
       }
       notify();
     }, ()=>{ planReady=true; status="offline"; notify(); });
-    let endDate=date;
-    try{ endDate=Logic.addIsoDays(date, 6)||date; }catch(e){}
-    weekUnsub=userRef().collection("plans")
-      .where(firebase.firestore.FieldPath.documentId(), ">=", date)
-      .where(firebase.firestore.FieldPath.documentId(), "<=", endDate)
-      .onSnapshot(snap=>{
-        const next={};
-        snap.forEach(doc=>{
-          if(!/^\d{4}-\d{2}-\d{2}$/.test(doc.id)) return;
-          const data=doc.data()||{};
-          next[doc.id]={
-            date:doc.id,
-            title:data.title||"",
-            status:data.status||"",
-            notes:data.notes||"",
-            deload:!!data.deload,
-            blocks:Array.isArray(data.blocks)?data.blocks:[]
-          };
-        });
-        schedulePlansMap=next;
+    /* A document-id range on a subcollection compares the full path, so it
+       matches nothing. Read each of the seven plan documents by id. */
+    for(let i=0;i<7;i++){
+      let day=date;
+      try{ day=Logic.addIsoDays(date, i)||date; }catch(e){}
+      if(!day) continue;
+      weekUnsubs.push(userRef().collection("plans").doc(day).onSnapshot(snap=>{
+        if(!snap.exists){
+          if(schedulePlansMap[day]) delete schedulePlansMap[day];
+        } else {
+          const data=snap.data()||{};
+          schedulePlansMap[day]=Object.assign({}, data, {date:data.date||day});
+        }
         notify();
-      }, ()=>{});
+      }, ()=>{}));
+    }
     userUnsub=userRef().onSnapshot(snap=>{
       if(!snap.exists || migrating || blocked) return;
       const data=snap.data()||{};
