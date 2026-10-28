@@ -14,7 +14,131 @@ users/{uid}
 
 `hunter` is Adam's **profile**. His uid is whatever Firebase assigns when he signs in. The SYSTEM tab shows it. The user document also stores `profile` and `name`, so a service account can list athletes and match them.
 
-The bot should use the **Admin SDK** with a service account. That bypasses `firestore.rules`. A client SDK with custom claim `bot: true` or `admin: true` is also allowed to create plans. Phones cannot create or edit plan contents.
+The bot should use the **Admin SDK** with a service account. That bypasses `firestore.rules`. A client SDK with custom claim `bot: true` or `admin: true` is also allowed to create plans, read intakes, and mark plan requests fulfilled. Phones cannot create or edit plan contents.
+
+There is no email address in this protocol. Match athletes by Auth uid, and match Adam by the user-document field `profile == "hunter"` plus the one-time shortcut below.
+
+## Intake
+
+After sign-in, an athlete with no submitted intake is offered a questionnaire (goals, days, session length, time of day, equipment, experience, optional age and sex, height, weight, injuries, disliked movements, a push-up or lift baseline, cardio, optional nutrition, and a free-text note). They can skip it. Skipping sets `intakeDismissedAt` on `users/{uid}` so the prompt does not come back; SYSTEM can still open the form. Sending it again replaces the intake and re-opens the plan request.
+
+```
+users/{uid}/intake/current
+```
+
+```json
+{
+  "version": 1,
+  "source": "athlete",
+  "status": "submitted",
+  "submittedAt": "2026-10-28T15:00:00.000Z",
+  "updatedAt": "2026-10-28T15:00:00.000Z",
+  "profile": "owen",
+  "goals": ["strength", "consistency"],
+  "goalsNote": "Just want to keep showing up.",
+  "daysPerWeek": 3,
+  "weekdays": ["mon", "wed", "fri"],
+  "sessionMinutes": 45,
+  "timeOfDay": "evening",
+  "location": "full_gym",
+  "equipmentNote": "",
+  "experience": "some",
+  "age": 34,
+  "sex": "female",
+  "height": { "unit": "ft-in", "feet": 5, "inches": 6 },
+  "weight": { "unit": "lb", "value": 150 },
+  "injuries": { "areas": ["knee"], "note": "Right knee on deep squats." },
+  "disliked": "burpees",
+  "baseline": { "pushups": 8, "recentLift": "" },
+  "cardio": "Can walk 30 minutes.",
+  "nutrition": "",
+  "anythingElse": ""
+}
+```
+
+`status` is `draft` or `submitted`. `source` is `athlete` or `coach`. `goals` are `strength`, `fat_loss`, `endurance`, `consistency`, `sport`. `location` is `full_gym`, `home_weights`, or `bodyweight`. `timeOfDay` is `morning`, `afternoon`, `evening`, or `flexible`. `experience` is `new`, `some`, `consistent`, or `advanced`. `sex` is optional: `female`, `male`, `other`, `prefer_not`. Height is either `{unit:"cm", cm}` or `{unit:"ft-in", feet, inches}`. Weight is `{unit:"lb"|"kg", value}`. Empty answers are omitted. The phone writes this document; the bot reads it.
+
+`users/{uid}.coachStatus` is `awaiting_plan` after they submit, and the phone shows “your coach is building your plan” while still letting them train on the built-in week. Set `coachStatus` to `ready` once a plan exists (and set `updatedAt`). The banner also hides on its own once today’s plan document exists.
+
+### Hunter shortcut (Adam)
+
+Adam’s trainer already knows his answers, so the `hunter` profile does not get the questionnaire. The first time a signed-in `hunter` profile that already has a training log is linked, the phone does three things, once:
+
+1. Creates `intakeShortcut/hunter` with `{spent: true, spentAt, uid}`. The uid is the Firebase Auth uid of that account. Clients cannot update or delete this document, so the shortcut cannot be claimed again and no other account can use it.
+2. Writes `users/{that uid}/intake/current` with only `version`, `source: "coach"`, `status: "submitted"`, `submittedAt`, `updatedAt`, `profile: "hunter"`, and a short `note`. It does not invent goals, injuries, or body stats.
+3. Sets `users/{uid}.hunterShortcutSpent` to `true`.
+
+A brand-new profile that is still named `hunter` but has no log does not consume the shortcut; they get the questionnaire like anyone else. The default profile on a fresh install is `hunter`.
+
+**The bot fills Adam’s real intake.** Read `intakeShortcut/hunter`, then read and merge `users/{uid}/intake/current` for that uid. Write the goals, schedule, equipment, injuries, baselines, and anything else you already know. Keep `source: "coach"`. Do not ask him to re-enter it, and do not look anyone up by email. This shortcut does not create a plan request and does not set `coachStatus`, because his programming already exists. Keep writing his daily plans the same way as before.
+
+If the shortcut document exists and the intake is missing, the same account will write the stub on a later sign-in. Other accounts that pick the hunter label after the flag is spent get the normal questionnaire.
+
+## Plan requests
+
+```
+planRequests/{uid}
+```
+
+Written when an athlete submits the questionnaire (`source: "athlete"` only):
+
+```json
+{
+  "status": "pending",
+  "uid": "<auth uid>",
+  "submittedAt": "2026-10-28T15:00:00.000Z",
+  "updatedAt": "2026-10-28T15:00:00.000Z",
+  "intakeVersion": 1,
+  "source": "athlete"
+}
+```
+
+Find new athletes with a single-field query (no composite index):
+
+```
+planRequests where status == pending
+```
+
+The Admin SDK can list that collection directly. A client with `bot: true` can too. The phone can read and rewrite only its own request, and only while the stored status stays `pending` (a later edit of the intake sets it back to `pending`). It cannot mark itself fulfilled.
+
+When the program and the first daily plans are written, update that document:
+
+```json
+{
+  "status": "fulfilled",
+  "fulfilledAt": "2026-10-28T18:00:00.000Z",
+  "updatedAt": "2026-10-28T18:00:00.000Z"
+}
+```
+
+Leave `uid` in place. Set `users/{uid}.coachStatus` to `ready` and bump `updatedAt` so the phone drops the waiting banner.
+
+To find Adam without a plan request, read `intakeShortcut/hunter` or query `users where profile == hunter`.
+
+## Multi-week program
+
+Daily plans still live at `users/{uid}/plans/{YYYY-MM-DD}` and are what the phone runs today. So the phone can show the days you have lined up, also write:
+
+```
+users/{uid}/program/current
+```
+
+```json
+{
+  "version": 1,
+  "title": "8-week build",
+  "startDate": "2026-10-28",
+  "weeks": 8,
+  "updatedAt": "2026-10-28T18:00:00.000Z",
+  "notes": "",
+  "days": [
+    { "date": "2026-10-28", "title": "Push — shoulder-friendly" },
+    { "date": "2026-10-30", "title": "Pull" }
+  ]
+}
+```
+
+`days[].date` is the athlete’s local date. The phone lists the next 7 dates that are today or later, and still falls back to the built-in week for any date that has no plan document. Only the bot can write `program/current`.
 
 ## Plan document
 
@@ -213,11 +337,15 @@ Calendar deloads are every 8th training week (8, 16, 24…) for profiles with `d
 
 | Path | Contents |
 | --- | --- |
-| `users/{uid}` | Profile, name, level, xp, streaks, `gateV`, `cardioLvl`, `daily`, `theme`, `tz`, `trainStart`, `deloadWk`, `deloadSkip`, `fastLog`, `schemaVersion`, `migratedAt`, `updatedAt`. |
+| `users/{uid}` | Profile, name, level, xp, streaks, `gateV`, `cardioLvl`, `daily`, `theme`, `tz`, `trainStart`, `deloadWk`, `deloadSkip`, `fastLog`, `schemaVersion`, `migratedAt`, `updatedAt`, `coachStatus`, `intakeDismissedAt`, `hunterShortcutSpent`. `coachStatus` is not part of the phone's ordinary save, so a bot update of it is not overwritten by the next set logged. |
 | `users/{uid}/exercises/{exerciseId}` | `calibrated`, `weight`, `fails`, `best`, `base`, `updatedAt`. |
 | `users/{uid}/stretch/{stretchId}` | `{ "n": <times cleared>, "updatedAt" }` — fallback stretch progression only. |
 | `users/{uid}/bodyweight/{YYYY-MM-DD}` | `{ "lbs", "updatedAt" }`. |
 | `users/{uid}/journal/{id}` | Human log lines. |
+| `users/{uid}/intake/current` | Questionnaire, or the hunter `source: "coach"` stub. |
+| `users/{uid}/program/current` | Upcoming day titles. Bot write, athlete read. |
+| `planRequests/{uid}` | `pending` or `fulfilled`. |
+| `intakeShortcut/hunter` | The spent one-time shortcut. `{spent, spentAt, uid}`. |
 | `leaderboard/{uid}` | `name`, `level`, `rank`, `streak`, `updated`, `uid`. Nothing else. |
 
 Last write wins per document, by `updatedAt` (ISO-8601, UTC, lexicographic). The in-progress dungeon stays on the phone that started it.
@@ -270,7 +398,7 @@ Google sign-in uses a popup, and falls back to a redirect if the popup is blocke
 Unit checks (no emulator):
 
 ```
-node --test test/logic.test.js
+node --test test/logic.test.js test/intake.test.js
 ```
 
 That includes Adam's 2026-10-28 export when `SYSTEM_FIXTURE` points at it (the file is not in git; it contains other people's guild names).

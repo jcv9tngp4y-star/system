@@ -55,7 +55,9 @@ function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
 <script src="logic.js"></script>
 <script src="migrate.js"></script>
 <script src="plan.js"></script>
+<script src="intake.js"></script>
 <script src="cloud.js"></script>
+<script src="intake-ui.js"></script>
 <script>
 "use strict";
 
@@ -350,7 +352,22 @@ function renderNav(){
   document.getElementById("nav").innerHTML = NAVS.map(([id,ico,lbl])=>
     `<button class="${curView===id?'on':''}" onclick="go('${id}')"><span class="ico">${ico}</span>${lbl}</button>`).join("");
 }
-function go(v){ curView=v; renderNav(); VIEWS[v](); window.scrollTo(0,0); if(typeof pushLB==="function") pushLB(); }
+function maybeOfferIntake(){
+  if(curView!=="quest" || S.session) return;
+  if(typeof Intake==="undefined" || !window.Cloud || !Cloud.signedIn || !Cloud.signedIn()) return;
+  if(!Cloud.intakeContext || !Intake.shouldOfferIntake(Cloud.intakeContext())) return;
+  const ovl=document.getElementById("ovl");
+  if(ovl && ovl.classList.contains("show")) return;
+  openIntake();
+}
+function go(v){
+  curView=v; renderNav();
+  if(v==="intake"){ if(typeof intakeRender==="function") intakeRender(); }
+  else if(VIEWS[v]) VIEWS[v]();
+  window.scrollTo(0,0);
+  if(typeof pushLB==="function") pushLB();
+  if(v==="quest") maybeOfferIntake();
+}
 
 /* ---------- name / profile ---------- */
 /* ---------- name / profile registration ---------- */
@@ -673,6 +690,12 @@ function vQuest(){
       <div class="muted" style="font-size:10px;margin-top:4px">No penalty. Clear today's quest and the count starts again.</div>
     </div></div>` : "";
   if(S.missNote){ S.missNote=null; save(); }
+  const coachWait = (window.Cloud && Cloud.awaitingPlan && Cloud.awaitingPlan()) ? `
+    <div class="panel"><div class="pbody" style="text-align:center">
+      <div style="font-size:12px;letter-spacing:2px;color:var(--gold)">YOUR COACH IS BUILDING YOUR PLAN</div>
+      <div class="muted" style="font-size:11px;margin-top:6px;line-height:1.6">You can train on the standard program until it arrives.</div>
+      <button class="btn ghost" onclick="openIntake()">UPDATE YOUR ANSWERS</button>
+    </div></div>` : "";
 
   let dailyBody="", dailyHtml="";
   if(S.daily.enabled){
@@ -714,8 +737,8 @@ function vQuest(){
         <div class="pbody">${dailyBody}</div></div>`;
   }
 
-  document.getElementById("view").innerHTML = storeWarn + cloudWarn + deloadBanner + decayHtml + shieldHtml + penHtml + dailyHtml
-    + gatePanel(t) + schedulePanel() + bkHtml;
+  document.getElementById("view").innerHTML = storeWarn + cloudWarn + coachWait + deloadBanner + decayHtml + shieldHtml + penHtml + dailyHtml
+    + gatePanel(t) + coachScheduleHtml() + schedulePanel() + bkHtml;
 }
 
 /* ---------- gate panel + schedule ---------- */
@@ -808,6 +831,18 @@ function gatePanel(t){
   }
   return `<div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>DUNGEON GATE</div>
       <div class="pbody">${inner}</div></div>`;
+}
+function coachScheduleHtml(){
+  if(!window.Cloud || !Cloud.upcomingDays) return "";
+  const days=Cloud.upcomingDays();
+  if(!days.length) return "";
+  const today=todayStr();
+  return `<div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>COACH SCHEDULE</div>
+      <div class="pbody">${days.map(d=>`<div class="goalrow">
+        <span class="gname" style="${d.date===today?"color:#fff;text-shadow:0 0 8px var(--p)":""}">${d.date===today?"▶ ":""}${esc(d.date)} — ${esc(d.title)}</span>
+        <span class="gval">${d.date===today?"TODAY":"UPCOMING"}</span></div>`).join("")}
+        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Today's dungeon uses the coach plan when one is published. Later days stay on the standard week until their plan arrives.</div>
+      </div></div>`;
 }
 function schedulePanel(){
   const gi=gateForToday();
@@ -1581,6 +1616,9 @@ function vSys(){
     <div class="panel"><div class="ptitle"><div class="diamond"><span class="gear">⚙</span></div>SYSTEM</div>
       <div class="pbody">
         ${window.Cloud?Cloud.accountSection():""}
+        ${(window.Cloud&&Cloud.signedIn&&Cloud.signedIn())?`<div class="sect">COACH</div>
+        <div class="muted" style="font-size:11px;line-height:1.6">Goals, schedule, equipment, and anything that should change the plan. Your coach reads this and writes the days.</div>
+        <button class="btn ghost" onclick="openIntake()">${(S.intake&&S.intake.status==="submitted")?"EDIT COACH INTAKE":"TELL YOUR COACH ABOUT YOU"}</button>`:""}
         <div class="sect">PLAYER</div>
         <div class="goalrow"><span class="gname">Name</span><span class="gval">${S.name||"—"}</span></div>
         <div class="goalrow"><span class="gname">Profile</span><span class="gval">${prof().lbl}</span></div>
@@ -1654,8 +1692,10 @@ if(window.Cloud){
     const ovl=document.getElementById("ovl");
     if(ovl && ovl.classList.contains("show")) return;
     if(S.session && curView==="workout") return;
+    if(curView==="intake") return;
     if(curView==="quest") vQuest();
     else if(curView==="sys") vSys();
+    maybeOfferIntake();
   };
   Cloud.start();
 }

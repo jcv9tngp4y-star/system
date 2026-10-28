@@ -71,6 +71,71 @@ async function main(){
     const listed = await anon.collection("leaderboard").get();
     assert.equal(listed.size, 1);
     assert.equal(listed.docs[0].data().name, "ADAM");
+
+    const athleteIntake = {
+      version:1, source:"athlete", status:"submitted",
+      submittedAt:"2026-10-28T15:00:00.000Z", updatedAt:"2026-10-28T15:00:00.000Z",
+      profile:"owen", goals:["strength"], daysPerWeek:3, weekdays:["mon","wed","fri"],
+      sessionMinutes:45, location:"full_gym", injuries:{areas:["knee"], note:"old sprain"}
+    };
+    await assertFails(anon.collection("users").doc("owen").collection("intake").doc("current").get());
+    await assertFails(adam.collection("users").doc("owen").collection("intake").doc("current").get());
+    await assertSucceeds(owen.collection("users").doc("owen").collection("intake").doc("current").set(athleteIntake));
+    await assertFails(owen.collection("users").doc("owen").collection("intake").doc("current").set(
+      Object.assign({}, athleteIntake, {source:"coach", profile:"hunter"})
+    ));
+
+    const shortcut = {spent:true, spentAt:"2026-10-28T15:00:00.000Z", uid:"adam"};
+    await assertFails(anon.collection("intakeShortcut").doc("hunter").get());
+    await assertSucceeds(adam.collection("intakeShortcut").doc("hunter").set(shortcut));
+    await assertFails(owen.collection("intakeShortcut").doc("hunter").set(
+      {spent:true, spentAt:"2026-10-28T16:00:00.000Z", uid:"owen"}
+    ));
+    await assertFails(adam.collection("intakeShortcut").doc("hunter").update({spent:false}));
+    await assertSucceeds(owen.collection("intakeShortcut").doc("hunter").get());
+
+    const coachIntake = {
+      version:1, source:"coach", status:"submitted", profile:"hunter",
+      submittedAt:"2026-10-28T15:00:00.000Z", updatedAt:"2026-10-28T15:00:00.000Z",
+      note:"Coach-provided placeholder for the hunter profile."
+    };
+    await assertFails(owen.collection("users").doc("owen").collection("intake").doc("current").set(coachIntake));
+    await assertSucceeds(adam.collection("users").doc("adam").collection("intake").doc("current").set(coachIntake));
+    await assertFails(adam.collection("users").doc("adam").collection("intake").doc("current").set(
+      Object.assign({}, coachIntake, {profile:"owen"})
+    ));
+
+    const pending = {
+      status:"pending", uid:"owen", source:"athlete", intakeVersion:1,
+      submittedAt:"2026-10-28T15:00:00.000Z", updatedAt:"2026-10-28T15:00:00.000Z"
+    };
+    await assertFails(anon.collection("planRequests").doc("owen").get());
+    await assertFails(adam.collection("planRequests").doc("owen").get());
+    await assertSucceeds(owen.collection("planRequests").doc("owen").set(pending));
+    await assertFails(owen.collection("planRequests").doc("owen").update({
+      status:"fulfilled", updatedAt:"2026-10-28T16:00:00.000Z"
+    }));
+    await assertSucceeds(bot.collection("planRequests").doc("owen").update({
+      status:"fulfilled", fulfilledAt:"2026-10-28T16:00:00.000Z", updatedAt:"2026-10-28T16:00:00.000Z"
+    }));
+    await assertSucceeds(owen.collection("planRequests").doc("owen").set(Object.assign({}, pending, {
+      updatedAt:"2026-10-28T17:00:00.000Z"
+    })));
+    const pendingList = await bot.collection("planRequests").where("status","==","pending").get();
+    assert.equal(pendingList.size, 1);
+    await assertFails(owen.collection("planRequests").where("status","==","pending").get());
+
+    const program = {
+      version:1, title:"Build", startDate:"2026-10-28", weeks:8,
+      updatedAt:"2026-10-28T15:00:00.000Z",
+      days:[{date:"2026-10-28", title:"Push"}, {date:"2026-10-30", title:"Pull"}]
+    };
+    await assertFails(owen.collection("users").doc("owen").collection("program").doc("current").set(program));
+    await assertSucceeds(bot.collection("users").doc("owen").collection("program").doc("current").set(program));
+    await assertSucceeds(owen.collection("users").doc("owen").collection("program").doc("current").get());
+    await assertFails(adam.collection("users").doc("owen").collection("program").doc("current").get());
+    await assertSucceeds(bot.collection("users").doc("adam").get());
+
     console.log("rules tests passed");
   } finally {
     await testEnv.cleanup();

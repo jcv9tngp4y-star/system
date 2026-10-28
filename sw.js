@@ -1,11 +1,12 @@
-/* THE SYSTEM - offline cache v6
+/* THE SYSTEM - offline cache v7
    App files are network-first so a publish actually reaches phones.
    The previous cache-first path for programs.js/styles kept old programming forever.
    Firebase SDK scripts are cached too, so a signed-in plan still opens in the gym. */
-const CACHE = "system-v6";
+const CACHE = "system-v7";
 const ASSETS = [
   "./", "./index.html", "./styles.css", "./programs.js", "./logic.js", "./migrate.js",
-  "./plan.js", "./cloud.js", "./manifest.json", "./icon-180.png", "./icon-512.png"
+  "./plan.js", "./intake.js", "./cloud.js", "./intake-ui.js", "./manifest.json",
+  "./icon-180.png", "./icon-512.png"
 ];
 const FBJS = [
   "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js",

@@ -14,8 +14,120 @@ service cloud.firestore {
       return signedIn() && (request.auth.token.admin == true || request.auth.token.bot == true);
     }
 
+    // Intake the athlete submits. source "coach" is the one-time hunter
+    // shortcut, and only the account that created intakeShortcut/hunter may write it.
+    function validIntake() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'version', 'source', 'status', 'submittedAt', 'updatedAt', 'profile', 'note',
+          'goals', 'goalsNote', 'daysPerWeek', 'weekdays', 'sessionMinutes', 'timeOfDay',
+          'location', 'equipmentNote', 'experience', 'age', 'sex', 'height', 'weight',
+          'injuries', 'disliked', 'baseline', 'cardio', 'nutrition', 'anythingElse'
+        ])
+        && d.version == 1
+        && d.source in ['athlete', 'coach']
+        && d.status in ['draft', 'submitted']
+        && d.updatedAt is string
+        && d.updatedAt.size() > 0
+        && d.updatedAt.size() <= 40
+        && (!('submittedAt' in d) || (d.submittedAt is string && d.submittedAt.size() <= 40))
+        && (!('profile' in d) || (d.profile is string && d.profile.size() <= 20))
+        && (!('note' in d) || (d.note is string && d.note.size() <= 500))
+        && (!('goals' in d) || (d.goals is list && d.goals.size() <= 8))
+        && (!('goalsNote' in d) || (d.goalsNote is string && d.goalsNote.size() <= 500))
+        && (!('daysPerWeek' in d) || (d.daysPerWeek is int && d.daysPerWeek >= 1 && d.daysPerWeek <= 7))
+        && (!('weekdays' in d) || (d.weekdays is list && d.weekdays.size() <= 7))
+        && (!('sessionMinutes' in d) || (d.sessionMinutes is int && d.sessionMinutes >= 10 && d.sessionMinutes <= 180))
+        && (!('timeOfDay' in d) || (d.timeOfDay is string && d.timeOfDay.size() <= 20))
+        && (!('location' in d) || (d.location is string && d.location.size() <= 20))
+        && (!('equipmentNote' in d) || (d.equipmentNote is string && d.equipmentNote.size() <= 500))
+        && (!('experience' in d) || (d.experience is string && d.experience.size() <= 20))
+        && (!('age' in d) || (d.age is int && d.age >= 1 && d.age <= 120))
+        && (!('sex' in d) || (d.sex is string && d.sex.size() <= 20))
+        && (!('disliked' in d) || (d.disliked is string && d.disliked.size() <= 500))
+        && (!('cardio' in d) || (d.cardio is string && d.cardio.size() <= 500))
+        && (!('nutrition' in d) || (d.nutrition is string && d.nutrition.size() <= 500))
+        && (!('anythingElse' in d) || (d.anythingElse is string && d.anythingElse.size() <= 1000))
+        && (!('height' in d) || (d.height is map && d.height.keys().hasOnly(['unit', 'cm', 'feet', 'inches'])))
+        && (!('weight' in d) || (d.weight is map && d.weight.keys().hasOnly(['unit', 'value'])))
+        && (!('injuries' in d) || (
+          d.injuries is map
+          && d.injuries.keys().hasOnly(['areas', 'note'])
+          && (!('areas' in d.injuries) || (d.injuries.areas is list && d.injuries.areas.size() <= 12))
+          && (!('note' in d.injuries) || (d.injuries.note is string && d.injuries.note.size() <= 500))
+        ))
+        && (!('baseline' in d) || (
+          d.baseline is map
+          && d.baseline.keys().hasOnly(['pushups', 'notSure', 'recentLift'])
+          && (!('notSure' in d.baseline) || d.baseline.notSure is bool)
+          && (!('pushups' in d.baseline) || (d.baseline.pushups is int && d.baseline.pushups >= 0 && d.baseline.pushups <= 500))
+          && (!('recentLift' in d.baseline) || (d.baseline.recentLift is string && d.baseline.recentLift.size() <= 200))
+        ))
+        && (d.source != 'coach' || (
+          d.profile == 'hunter'
+          && exists(/databases/$(database)/documents/intakeShortcut/hunter)
+          && get(/databases/$(database)/documents/intakeShortcut/hunter).data.uid == request.auth.uid
+        ));
+    }
+
+    function validPlanRequestPending(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['status', 'uid', 'submittedAt', 'updatedAt', 'intakeVersion', 'source'])
+        && d.status == 'pending'
+        && d.uid == uid
+        && d.submittedAt is string
+        && d.submittedAt.size() <= 40
+        && d.updatedAt is string
+        && d.updatedAt.size() <= 40
+        && d.intakeVersion is int
+        && d.intakeVersion >= 1
+        && d.intakeVersion <= 100
+        && d.source == 'athlete';
+    }
+
+    function validPlanRequestAny() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['status', 'uid', 'submittedAt', 'updatedAt', 'intakeVersion', 'source', 'fulfilledAt'])
+        && d.status in ['pending', 'fulfilled']
+        && d.uid is string
+        && d.uid.size() <= 128
+        && d.updatedAt is string
+        && d.updatedAt.size() <= 40
+        && (!('fulfilledAt' in d) || (d.fulfilledAt is string && d.fulfilledAt.size() <= 40))
+        && (!('submittedAt' in d) || (d.submittedAt is string && d.submittedAt.size() <= 40))
+        && (!('source' in d) || d.source in ['athlete', 'coach'])
+        && (!('intakeVersion' in d) || (d.intakeVersion is int && d.intakeVersion >= 1 && d.intakeVersion <= 100));
+    }
+
+    function validProgram() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['version', 'title', 'startDate', 'weeks', 'updatedAt', 'notes', 'days'])
+        && d.version is int
+        && d.version >= 1
+        && d.version <= 100
+        && d.updatedAt is string
+        && d.updatedAt.size() <= 40
+        && (!('title' in d) || (d.title is string && d.title.size() <= 80))
+        && (!('startDate' in d) || (d.startDate is string && d.startDate.size() <= 10))
+        && (!('weeks' in d) || (d.weeks is int && d.weeks >= 1 && d.weeks <= 52))
+        && (!('notes' in d) || (d.notes is string && d.notes.size() <= 500))
+        && (!('days' in d) || (d.days is list && d.days.size() <= 400));
+    }
+
+    function validShortcut() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['spent', 'spentAt', 'uid'])
+        && d.spent == true
+        && d.uid == request.auth.uid
+        && d.spentAt is string
+        && d.spentAt.size() > 0
+        && d.spentAt.size() <= 40;
+    }
+
     match /users/{uid} {
-      allow read, write: if owns(uid);
+      allow read: if owns(uid) || isBot();
+      allow create, delete: if owns(uid);
+      allow update: if owns(uid) || isBot();
 
       match /exercises/{id} {
         allow read, write: if owns(uid);
@@ -36,6 +148,18 @@ service cloud.firestore {
         allow read, write: if owns(uid);
       }
 
+      match /intake/{docId} {
+        allow read: if owns(uid) || isBot();
+        allow create, update: if owns(uid) && validIntake();
+        allow delete: if false;
+      }
+
+      match /program/{docId} {
+        allow read: if owns(uid) || isBot();
+        allow create, update: if isBot() && validProgram();
+        allow delete: if isBot();
+      }
+
       // Coach writes the plan. The phone may only mark how far the athlete got.
       match /plans/{date} {
         allow read: if owns(uid);
@@ -46,6 +170,25 @@ service cloud.firestore {
           && request.resource.data.status in ['published', 'started', 'completed', 'skipped']
         );
       }
+    }
+
+    // One document per athlete. The phone creates it as pending and may set it
+    // back to pending after a change. Only the bot may mark it fulfilled.
+    match /planRequests/{uid} {
+      allow get: if isBot() || owns(uid);
+      allow list: if isBot();
+      allow create: if (owns(uid) && validPlanRequestPending(uid)) || (isBot() && validPlanRequestAny());
+      allow update: if (isBot() && validPlanRequestAny()) || (owns(uid) && validPlanRequestPending(uid));
+      allow delete: if isBot();
+    }
+
+    // Spent once, by whichever signed-in hunter profile claims it first.
+    // Clients cannot update or delete it, so it is not offered again.
+    match /intakeShortcut/{id} {
+      allow get: if signedIn();
+      allow list: if isBot();
+      allow create: if signedIn() && id == 'hunter' && validShortcut();
+      allow update, delete: if isBot();
     }
 
     // Public roster: name, level, rank, streak. No workouts.

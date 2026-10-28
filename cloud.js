@@ -15,7 +15,10 @@ const Cloud=(function(){
   ];
   let auth=null, db=null, user=null, activeUid=null;
   let authReady=false, planReady=false, plan=null;
-  let planUnsub=null, userUnsub=null;
+  let planUnsub=null, userUnsub=null, progUnsub=null, reqUnsub=null, intakeUnsub=null;
+  let program=null, planRequest=null;
+  let shortcutDocSpent=false, shortcutUid=null, intakeBusy=false, shortcutBlocked=false;
+  let draftTimer=null;
   let pushTimer=null, paused=false, migrating=false, pendingPull=false;
   let blocked="", status="local", errMsg="", emu=false;
   let lastEx={}, lastStretch={}, lastW={};
@@ -81,6 +84,7 @@ const Cloud=(function(){
     }
     if(data.updatedAt) S.updatedAt=data.updatedAt;
     if(data.migratedAt) S.cloudMigratedAt=data.migratedAt;
+    if(Object.prototype.hasOwnProperty.call(data, "coachStatus")) S.coachStatus=data.coachStatus;
   }
   function mergeWeights(rows){
     const by={};
@@ -166,6 +170,7 @@ const Cloud=(function(){
     const sessions=[];
     sSnap.forEach(doc=>{ sessions.push(Object.assign({id:doc.id}, doc.data()||{})); });
     mergeStruct(sessions);
+    await loadCoachDocs();
     pendingPull=false;
   }
 
@@ -218,9 +223,177 @@ const Cloud=(function(){
     }
   }
 
-  function listen(){
+  function stopListen(){
     if(planUnsub) planUnsub();
     if(userUnsub) userUnsub();
+    if(progUnsub) progUnsub();
+    if(reqUnsub) reqUnsub();
+    if(intakeUnsub) intakeUnsub();
+    planUnsub=userUnsub=progUnsub=reqUnsub=intakeUnsub=null;
+  }
+
+  function intakeContext(){
+    return {
+      signedIn:!!user,
+      profile:S.profile||"",
+      established:typeof Intake!=="undefined" && Intake.establishedFromState(S),
+      intake:S.intake||null,
+      hasDraft:typeof Intake!=="undefined" && Intake.draftStarted(S.intakeDraft),
+      dismissedAt:S.intakeDismissedAt||null,
+      shortcutSpent:!!(shortcutDocSpent || S.hunterShortcutSpent),
+      shortcutBlocked:shortcutBlocked,
+      intakeBusy:intakeBusy
+    };
+  }
+
+  async function loadCoachDocs(){
+    if(!user || !db || typeof Intake==="undefined") return;
+    try{
+      const intakeSnap=await userRef().collection("intake").doc("current").get();
+      if(intakeSnap.exists){
+        const remote=intakeSnap.data()||{};
+        const local=S.intake;
+        if(!local || (remote.updatedAt||"")>=(local.updatedAt||"")) S.intake=remote;
+        if(remote.status==="draft" && !Intake.draftStarted(S.intakeDraft)) S.intakeDraft=remote;
+      }
+    }catch(e){}
+    try{
+      const progSnap=await userRef().collection("program").doc("current").get();
+      if(progSnap.exists){
+        program=progSnap.data()||{};
+        S.program=program;
+      }
+    }catch(e){}
+    try{
+      const reqSnap=await db.collection("planRequests").doc(user.uid).get();
+      planRequest=reqSnap.exists ? (reqSnap.data()||{}) : null;
+    }catch(e){}
+    try{
+      const sc=await db.collection("intakeShortcut").doc("hunter").get();
+      shortcutDocSpent=sc.exists;
+      shortcutUid=sc.exists ? ((sc.data()||{}).uid||null) : null;
+    }catch(e){}
+  }
+
+  async function writeCoachStub(now){
+    const stub=Intake.coachIntakeStub(now);
+    await userRef().collection("intake").doc("current").set(stub);
+    S.intake=stub;
+    S.hunterShortcutSpent=true;
+    S.intakeDraft=null;
+    S.intakeStep=0;
+    const stamp=(!S.updatedAt || now>S.updatedAt) ? now : S.updatedAt;
+    await userRef().set({hunterShortcutSpent:true, updatedAt:stamp}, {merge:true});
+    S.updatedAt=stamp;
+    persist();
+  }
+
+  async function claimShortcut(now){
+    const ref=db.collection("intakeShortcut").doc("hunter");
+    try{
+      await db.runTransaction(async tx=>{
+        const s=await tx.get(ref);
+        if(s.exists){
+          shortcutUid=(s.data()||{}).uid||null;
+          throw Object.assign(new Error("spent"), {code:"already-exists"});
+        }
+        tx.set(ref, {spent:true, spentAt:now, uid:user.uid});
+      });
+      shortcutDocSpent=true;
+      shortcutUid=user.uid;
+      return "claimed";
+    }catch(e){
+      try{
+        const again=await ref.get();
+        if(again.exists){
+          shortcutDocSpent=true;
+          shortcutUid=(again.data()||{}).uid||null;
+          return "spent";
+        }
+      }catch(err){}
+      return "failed";
+    }
+  }
+
+  async function settleIntake(){
+    if(!user || !db || typeof Intake==="undefined") return;
+    await loadCoachDocs();
+    if(Intake.shouldRepairCoachIntake(intakeContext(), shortcutUid, user.uid)){
+      try{ await writeCoachStub(new Date().toISOString()); }catch(e){}
+    }
+    if(!Intake.shouldUseHunterShortcut(intakeContext())) return;
+    const now=new Date().toISOString();
+    const claim=await claimShortcut(now);
+    if(claim==="claimed" || (claim==="spent" && shortcutUid===user.uid)){
+      if(!(S.intake && S.intake.status==="submitted")){
+        try{ await writeCoachStub(now); }catch(e){}
+      }
+      return;
+    }
+    if(claim==="failed") shortcutBlocked=true;
+  }
+
+  function saveIntakeDraft(doc){
+    if(!user || !db || typeof Intake==="undefined") return;
+    if(S.intake && S.intake.status==="submitted") return;
+    clearTimeout(draftTimer);
+    draftTimer=setTimeout(()=>{
+      const clean=Intake.prepareIntake(doc, {
+        status:"draft", source:"athlete", profile:S.profile, now:new Date().toISOString()
+      });
+      userRef().collection("intake").doc("current").set(clean).then(()=>{
+        if(!S.intake || S.intake.status!=="submitted") S.intake=clean;
+      }).catch(()=>{});
+    }, 600);
+  }
+
+  function submitIntake(raw){
+    if(!user || !db || typeof Intake==="undefined") return Promise.reject(new Error("Sign in first."));
+    const now=new Date().toISOString();
+    const clean=Intake.prepareIntake(raw, {status:"submitted", source:"athlete", profile:S.profile, now:now});
+    const req=Intake.planRequestFromIntake(clean, user.uid, now);
+    return userRef().collection("intake").doc("current").set(clean).then(()=>{
+      return db.collection("planRequests").doc(user.uid).set(req);
+    }).then(()=>{
+      return userRef().set({coachStatus:"awaiting_plan", intakeSubmittedAt:now, updatedAt:now}, {merge:true});
+    }).then(()=>{
+      S.intake=clean;
+      S.coachStatus="awaiting_plan";
+      S.intakeSubmittedAt=now;
+      S.intakeDraft=null;
+      S.intakeStep=0;
+      if(!S.updatedAt || now>S.updatedAt) S.updatedAt=now;
+      planRequest=req;
+      persist();
+      notify();
+    });
+  }
+
+  function dismissIntake(){
+    const now=new Date().toISOString();
+    S.intakeDismissedAt=now;
+    if(!S.updatedAt || now>S.updatedAt) S.updatedAt=now;
+    persist();
+    if(user && db) userRef().set({intakeDismissedAt:now, updatedAt:now}, {merge:true}).catch(()=>{});
+    notify();
+  }
+
+  function awaitingPlan(){
+    if(!user) return false;
+    if(plan) return false;
+    if(planRequest && planRequest.status==="pending") return true;
+    return S.coachStatus==="awaiting_plan";
+  }
+
+  function upcomingDays(){
+    if(typeof Intake==="undefined") return [];
+    let today="";
+    try{ today=todayStr(); }catch(e){}
+    return Intake.upcomingFromProgram(program || (S && S.program), today, 7);
+  }
+
+  function listen(){
+    stopListen();
     const date=todayStr();
     planReady=false;
     planUnsub=userRef().collection("plans").doc(date).onSnapshot(snap=>{
@@ -240,50 +413,76 @@ const Cloud=(function(){
       applyUser(data);
       pullChildren().then(()=>{ persist(); notify(); }).catch(()=>{ status="offline"; notify(); });
     }, ()=>{ status="offline"; notify(); });
+    progUnsub=userRef().collection("program").doc("current").onSnapshot(snap=>{
+      program=snap.exists ? (snap.data()||{}) : null;
+      if(program) S.program=program;
+      persist();
+      notify();
+    }, ()=>{});
+    reqUnsub=db.collection("planRequests").doc(user.uid).onSnapshot(snap=>{
+      planRequest=snap.exists ? (snap.data()||{}) : null;
+      notify();
+    }, ()=>{});
+    intakeUnsub=userRef().collection("intake").doc("current").onSnapshot(snap=>{
+      if(!snap.exists) return;
+      const remote=snap.data()||{};
+      if(!S.intake || (remote.updatedAt||"")>=(S.intake.updatedAt||"")){
+        S.intake=remote;
+        persist();
+        if(curViewSafe()!=="intake") notify();
+      }
+    }, ()=>{});
+  }
+
+  function curViewSafe(){
+    try{ return typeof curView!=="undefined" ? curView : ""; }catch(e){ return ""; }
   }
 
   async function link(u){
     user=u;
     blocked="";
-    const snap=await userRef().get();
-    const remote=snap.exists ? (snap.data()||{}) : null;
-    if(S.cloudUid && S.cloudUid!==u.uid){
-      if(remote && remote.migratedAt){
+    shortcutBlocked=false;
+    intakeBusy=true;
+    let outcome="notify";
+    try{
+      const snap=await userRef().get();
+      const remote=snap.exists ? (snap.data()||{}) : null;
+      if(S.cloudUid && S.cloudUid!==u.uid && !(remote && remote.migratedAt)){
+        blocked="This browser already holds another account's training log. Nothing was uploaded. Sign out to keep using the data on this device.";
+        status="blocked";
+        planReady=true;
+        user=null;
+        try{ await auth.signOut(); }catch(e){}
+        notify();
+        outcome="silent";
+      } else if(S.cloudUid && S.cloudUid!==u.uid){
         applyUser(remote);
         await pullChildren();
-        S.cloudUid=u.uid;
-        persist();
         status="synced";
+      } else if(!remote || !remote.migratedAt){
+        if(localHasHistory()){
+          const ok=await confirmUpload();
+          if(!ok){ outcome="silent"; await auth.signOut(); }
+        }
+        if(outcome!=="silent") await uploadMigration();
+      } else if(!S.updatedAt || (remote.updatedAt && remote.updatedAt>S.updatedAt)){
+        applyUser(remote);
+        await pullChildren();
+        status="synced";
+      } else {
+        await flushNow();
+      }
+      if(outcome!=="silent" && user){
+        S.cloudUid=user.uid;
+        persist();
+        await settleIntake();
         listen();
-        notify();
-        return;
+        clearLegacyLeaderboard();
       }
-      blocked="This browser already holds another account's training log. Nothing was uploaded. Sign out to keep using the data on this device.";
-      status="blocked";
-      planReady=true;
-      user=null;
-      try{ await auth.signOut(); }catch(e){}
-      notify();
-      return;
+    } finally {
+      intakeBusy=false;
     }
-    if(!remote || !remote.migratedAt){
-      if(localHasHistory()){
-        const ok=await confirmUpload();
-        if(!ok){ await auth.signOut(); return; }
-      }
-      await uploadMigration();
-    } else if(!S.updatedAt || (remote.updatedAt && remote.updatedAt>S.updatedAt)){
-      applyUser(remote);
-      await pullChildren();
-      status="synced";
-    } else {
-      await flushNow();
-    }
-    S.cloudUid=user.uid;
-    persist();
-    listen();
-    clearLegacyLeaderboard();
-    notify();
+    if(outcome==="notify") notify();
   }
 
   function exercisePayload(id){
@@ -432,8 +631,8 @@ const Cloud=(function(){
         authReady=true;
         if(!u){
           user=null; activeUid=null; plan=null; planReady=true;
-          if(planUnsub){ planUnsub(); planUnsub=null; }
-          if(userUnsub){ userUnsub(); userUnsub=null; }
+          program=null; planRequest=null;
+          stopListen();
           if(!blocked) status=emu?"emulator":"signed-out";
           notify();
           return;
@@ -488,6 +687,8 @@ const Cloud=(function(){
   }
   function signOut(){
     pausePush();
+    stopListen();
+    program=null; planRequest=null;
     const done=()=>{ paused=false; user=null; plan=null; status="signed-out"; notify(); };
     if(!auth){ done(); return; }
     auth.signOut().then(done).catch(done);
@@ -525,6 +726,7 @@ const Cloud=(function(){
     start, onSave, pausePush, catchUp, writeSession, writeJournalEntry, markPlanStatus, pushLeaderboard,
     signInGoogle, emailSignIn, emailCreate, signOut, useLiveCloud, accountSection,
     uid, signedIn, authSettled, planResolved, todayPlan, blockedMessage, statusText, emulatorOn,
+    intakeContext, saveIntakeDraft, submitIntake, dismissIntake, awaitingPlan, upcomingDays,
     set onChange(fn){ handler=fn; },
     get onChange(){ return handler; }
   };
