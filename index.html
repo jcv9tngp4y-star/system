@@ -52,6 +52,10 @@ function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
 
 </script>
 <script src="programs.js"></script>
+<script src="logic.js"></script>
+<script src="migrate.js"></script>
+<script src="plan.js"></script>
+<script src="cloud.js"></script>
 <script>
 "use strict";
 
@@ -68,7 +72,26 @@ function gateForToday(){
 }
 const DAYLBL=["MON","TUE","WED","THU","FRI","SAT","SUN"];
 function trainWeek(){ return Math.floor(dayDiff(S.trainStart||todayStr(), todayStr())/7)+1; }
-function isDeload(){ return !!prof().deload && trainWeek()%8===0 && S.deloadWk===trainWeek(); }
+function isDeload(){
+  const plan=window.Cloud && Cloud.todayPlan && Cloud.todayPlan();
+  return Logic.isDeloadActive({
+    profileDeload: !!prof().deload,
+    trainWeek: trainWeek(),
+    deloadWk: S.deloadWk,
+    planDeload: !!(plan && plan.deload),
+    sessionDeload: !!(S.session && S.session.deload)
+  });
+}
+function deloadPromptDue(){
+  return Logic.shouldPromptDeload({
+    profileDeload: !!prof().deload,
+    trainWeek: trainWeek(),
+    deloadWk: S.deloadWk,
+    deloadSkip: S.deloadSkip,
+    hasPlan: !!(window.Cloud && Cloud.todayPlan && Cloud.todayPlan()),
+    authPending: !!(window.Cloud && Cloud.authSettled && !Cloud.authSettled())
+  });
+}
 function deloadW(w){ return w<0 ? w : Math.max(5, Math.round(w*0.85/5)*5); }
 /* weekend-id for jocelyne's pool: the Saturday date of this weekend */
 function weekendId(){
@@ -193,6 +216,8 @@ function pushLB(){
   if(!S.lbOpt) return;
   if(typeof navigator!=="undefined" && navigator.onLine===false) return;
   const now=Date.now(); if(now-lbLast<180000) return; lbLast=now; /* heartbeat max every 3 min */
+  if(window.Cloud && Cloud.signedIn && Cloud.signedIn()){ Cloud.pushLeaderboard(); return; }
+  /* Unsigned write. After firestore.rules deploy this is denied; the roster stays readable. */
   try{
     fetch(FBURL+"/"+S.lbId+"?key="+FB.key,{method:"PATCH",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({fields:{
@@ -259,15 +284,31 @@ function sideShort(e){ /* compact for previews */
   return `${recRows(e)} × ${recLbl(e)}${e.alt?" · alt.":e.per?" · L/R":(e.mode==="reps"?"":" · both")}`;
 }
 
-function save(){ lsSet(KEY, JSON.stringify(S)); }
+function persist(){ lsSet(KEY, JSON.stringify(S)); }
+function save(){
+  S.updatedAt=new Date().toISOString();
+  persist();
+  if(window.Cloud && Cloud.onSave) Cloud.onSave();
+}
 
-const exDef = id => { for(const k in LIFTS){ for(const arr of LIFTS[k].ab) for(const e of arr) if(e.id===id) return e; } return null; };
+const exDef = id => findExercise(id);
+function liftsFor(key,v){ return applyHunterLifts(S.profile, exListK(key,v)); }
+function sessionLifts(){
+  const key=S.session.key, v=S.session.v?1:0;
+  const swapped=liftsFor(key,v);
+  if(S.session.entries && swapped.every(e=>S.session.entries[e.id])) return swapped;
+  return exListK(key,v);
+}
+function stretchesFor(key){
+  const g=SGATES[key]; if(!g) return [];
+  return applyHunterStretches(S.profile, g.ex);
+}
+function blankLiftSet(e, st){
+  const wq = e.bw ? 0 : (st.calibrated ? (isDeload()? deloadW(st.weight):st.weight) : 0);
+  const reps = (e.bw||st.calibrated)? e.hi : 0;
+  return {w:wq, plannedW:wq, r:reps, plannedLo:e.lo, plannedHi:e.hi, done:false, skipped:false, at:null};
+}
 const exSt  = id => { if(!S.ex[id]) S.ex[id]={calibrated:false,weight:0,fails:0,best:0,base:0}; return S.ex[id]; };
-const round5  = w => Math.max(5, Math.round(w/5)*5);
-const round5a = w => Math.round(w/5)*5;
-const e1rm = (w,r) => w*(1+r/30);
-const fw = w => w<0 ? Math.abs(w)+" lb assist" : w+" lb";
-
 function rankOf(lv){ let r="E"; for(const [n,min] of RANKS) if(lv>=min) r=n; return r; }
 function xpNeed(lv){ return 100 + (lv-1)*50; }
 let pendingRank=null;
@@ -411,7 +452,9 @@ function completeDaily(){
     streakMsg+=`<div style="color:var(--gold);font-size:12px;letter-spacing:1px;margin-top:6px">🛡 SYSTEM GIFT: STREAK SHIELD EARNED<br><span class="muted" style="font-size:10px">Absorbs one missed day automatically. Cannot be stockpiled.</span></div>`;
   }
   const xp=50+Math.min(S.streak,25);
-  S.log.unshift({d:t, name:"DAILY QUEST", xp, det:items.map(i=>`${i.n} ${i.g}${i.unit==="min"?" min":""}`).join(" · ")});
+  const dailyEntry={d:t, name:"DAILY QUEST", xp, det:items.map(i=>`${i.n} ${i.g}${i.unit==="min"?" min":""}`).join(" · ")};
+  S.log.unshift(dailyEntry);
+  if(window.Cloud && Cloud.writeJournalEntry) Cloud.writeJournalEntry(dailyEntry);
   gainXp(xp); save(); pushLB();
   modal(`<h2>⚠ DAILY QUEST CLEAR</h2>
     <div class="big">+${xp} XP</div>
@@ -581,7 +624,7 @@ function vQuest(){
     dailyDone=S.daily.lastComplete===t;
   }
 
-  if(isDeload() && S.deloadWk!==trainWeek() && S.deloadSkip!==trainWeek()){
+  if(deloadPromptDue()){
     modal(`<h2>⚠ RECOVERY CHECK</h2>
       <div class="big" style="font-size:20px">DELOAD AVAILABLE</div>
       <div style="text-align:left;font-size:12px;line-height:1.8;margin-top:10px">
@@ -593,10 +636,17 @@ function vQuest(){
       <button class="btn ghost" onclick="S.deloadSkip=trainWeek();save();closeModal();go('quest')">I FEEL STRONG — SKIP IT</button>`);
     return;
   }
+  const coachPlan=window.Cloud && Cloud.todayPlan && Cloud.todayPlan();
   const deloadBanner = isDeload() ? `
     <div class="panel"><div class="pbody" style="text-align:center">
-      <span style="font-size:11px;letter-spacing:3px;color:var(--gold)">⚠ DELOAD WEEK ${trainWeek()} — WEIGHTS −15% · PROGRESSION PAUSED</span>
+      <span style="font-size:11px;letter-spacing:2px;color:var(--gold)">⚠ ${
+        (coachPlan && coachPlan.deload) || (S.session && S.session.deload)
+          ? "COACH DELOAD — THIS SESSION IS RECORDED. WORKING WEIGHTS STAY PUT."
+          : `DELOAD WEEK ${trainWeek()} — WEIGHTS −15% · PROGRESSION PAUSED`
+      }</span>
     </div></div>` : "";
+  const cloudWarn = (window.Cloud && Cloud.blockedMessage && Cloud.blockedMessage()) ? `
+    <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:12px">${esc(Cloud.blockedMessage())}</div></div>` : "";
   const storeWarn = storageBlocked ? `
     <div class="panel red"><div class="pbody" style="text-align:center;color:var(--bad);font-size:12px;letter-spacing:1px">
       ⚠ THIS VIEWER BLOCKS SAVED DATA — progress will be lost when you close the app.</div></div>` : "";
@@ -664,7 +714,7 @@ function vQuest(){
         <div class="pbody">${dailyBody}</div></div>`;
   }
 
-  document.getElementById("view").innerHTML = storeWarn + deloadBanner + decayHtml + shieldHtml + penHtml + dailyHtml
+  document.getElementById("view").innerHTML = storeWarn + cloudWarn + deloadBanner + decayHtml + shieldHtml + penHtml + dailyHtml
     + gatePanel(t) + schedulePanel() + bkHtml;
 }
 
@@ -689,12 +739,17 @@ function gatePanel(t){
   const gi=gateForToday();
   const pl=planFor(gi);
   const doneToday=S.lastDone===t;
+  const coach=window.Cloud && Cloud.todayPlan && Cloud.todayPlan();
   let inner;
   if(S.session){
     inner=`<div class="qname">${sessTitle()}</div>
       <div class="qsub">RAID IN PROGRESS</div>
       <button class="btn" onclick="go('workout')">RE-ENTER DUNGEON</button>
       <button class="btn ghost" onclick="abandonQuest()">ABANDON RAID</button>`;
+  } else if(coach && !doneToday){
+    inner = (coach.status==="completed" || coach.status==="skipped")
+      ? `<div class="qname">COACH PLAN ${coach.status==="skipped"?"SKIPPED":"CLEARED"}</div><div class="qsub">${esc(coach.title||"")}</div>`
+      : planGateInner(coach);
   } else if(pl.t==="pool"){
     const ps=poolState();
     const rows=POOL_GATES.map((g,i)=>{
@@ -722,7 +777,7 @@ function gatePanel(t){
     let goals2="", sub=gateKind(pl);
     if(pl.t==="lift"){
       const v=S.gateV[pl.key]?1:0;
-      goals2=exListK(pl.key,v).map(e=>{
+      goals2=liftsFor(pl.key,v).map(e=>{
         const st=exSt(e.id);
         const w = e.bw ? `bodyweight · ${e.lo}–${e.hi} reps`
                 : st.calibrated ? `${fw(isDeload()?deloadW(st.weight):st.weight)} × ${e.lo}–${e.hi}` : `CALIBRATE · ${e.lo}–${e.hi} reps`;
@@ -743,7 +798,7 @@ function gatePanel(t){
     } else if(pl.t==="ph"){
       goals2=`<div class="muted" style="text-align:center;font-size:11px;padding:8px 0">${pl.desc||""}</div>`;
     } else if(pl.t==="stretch"){
-      goals2=SGATES[planFor(gateForToday()).key]?SGATES[pl.key].ex.map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join(""):"";
+      goals2=SGATES[pl.key]?stretchesFor(pl.key).map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join(""):"";
       sub=pl.sch?"RECOVERY GATE — SCHEDULED":"RECOVERY GATE — OPTIONAL · CLEAR IT IF YOU WANT THE DAILY GATE FEELING";
     }
     inner=`<div class="qname">${gateLabel(pl)}</div>
@@ -760,7 +815,7 @@ function schedulePanel(){
       <div class="pbody">${weekPlan().map((pl,i)=>`<div class="goalrow">
         <span class="gname" style="${i===gi?'color:#fff;text-shadow:0 0 8px var(--p)':''}">${i===gi?"▶ ":""}${DAYLBL[i]} — ${gateLabel(planFor(i))}${pl.t==="lift"&&LIFTS[pl.key].ab.length>1?" ("+(S.gateV[pl.key]?"B":"A")+" next)":""}</span>
         <span class="gval">${gateKind(pl)}</span></div>`).join("")}
-        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Gates open only on their day. One raid per day.</div></div></div>`;
+        <div class="muted" style="font-size:10px;margin-top:8px;text-align:center">Gates open only on their day. One raid per day.${(window.Cloud&&Cloud.todayPlan&&Cloud.todayPlan())?" Today is a coach plan — this week is the fallback.":""}</div></div></div>`;
 }
 function bonusKeyFor(pl){
   if(pl.bon) return pl.bon;
@@ -773,6 +828,7 @@ function bonusKeyFor(pl){
 }
 function sessTitle(){
   const s=S.session;
+  if(s.kind==="plan") return s.title||"COACH PLAN";
   if(s.kind==="lift") return LIFTS[s.key].name+(LIFTS[s.key].ab.length>1?" — "+(s.v?"B":"A"):"");
   if(s.kind==="cardio") return "ENDURANCE TRAINING";
   if(s.kind==="runsimple") return s.name||"RUN";
@@ -794,14 +850,14 @@ function startPool(i){
   if(S.lastDone===todayStr()) return;
   if(!poolAvail(i)) return;
   const g=POOL_GATES[i];
-  if(g.t==="cardio"){ S.session={kind:"cardio",level:Math.min(S.cardioLvl,CARDIO.length),pool:i}; }
+  if(g.t==="cardio"){ S.session={kind:"cardio",source:"fallback",startedAt:new Date().toISOString(),level:Math.min(S.cardioLvl,CARDIO.length),pool:i}; }
   else { S.session=mkRecSession(g.key,true); S.session.pool=i; }
   save(); go("workout");
 }
 function mkRecSession(key,sched){
   const entries={};
-  for(const e of SGATES[key].ex) entries[e.id]={sets:Array.from({length:recRows(e)},()=>({done:false}))};
-  return {kind:"rec",key,entries,sched:!!sched};
+  for(const e of stretchesFor(key)) entries[e.id]={sets:Array.from({length:recRows(e)},()=>({done:false,at:null}))};
+  return {kind:"rec",source:"fallback",startedAt:new Date().toISOString(),key,entries,sched:!!sched};
 }
 function startGate(force){
   if(S.session){ go("workout"); return; }
@@ -820,19 +876,18 @@ function startGate(force){
   if(pl.t==="lift"){
     const v=S.gateV[pl.key]?1:0;
     const entries={};
-    for(const e of exListK(pl.key,v)){
+    for(const e of liftsFor(pl.key,v)){
       const st=exSt(e.id);
-      const wq = e.bw ? 0 : (st.calibrated ? (isDeload()? deloadW(st.weight):st.weight) : 0);
       entries[e.id]={cal:!e.bw&&!st.calibrated,
-        sets:Array.from({length:e.sets},()=>({w:wq,r:(e.bw||st.calibrated)?e.hi:0,done:false}))};
+        sets:Array.from({length:e.sets},()=>blankLiftSet(e, st))};
     }
-    S.session={kind:"lift",key:pl.key,v,entries};
+    S.session={kind:"lift",source:"fallback",startedAt:new Date().toISOString(),key:pl.key,v,entries};
   } else if(pl.t==="cardio"){
-    S.session={kind:"cardio",level:Math.min(S.cardioLvl,CARDIO.length)};
+    S.session={kind:"cardio",source:"fallback",startedAt:new Date().toISOString(),level:Math.min(S.cardioLvl,CARDIO.length)};
   } else if(pl.t==="runsimple"){
-    S.session={kind:"runsimple",name:pl.name,desc:pl.desc};
+    S.session={kind:"runsimple",source:"fallback",startedAt:new Date().toISOString(),name:pl.name,desc:pl.desc};
   } else if(pl.t==="ph"){
-    S.session={kind:"ph",name:pl.name,desc:pl.desc,sub:!!pl.sub};
+    S.session={kind:"ph",source:"fallback",startedAt:new Date().toISOString(),name:pl.name,desc:pl.desc,sub:!!pl.sub};
   } else if(pl.t==="stretch"){
     S.session=mkRecSession(pl.key,pl.sch);
   } else return;
@@ -845,7 +900,7 @@ function startRecBonus(){
   if(!bk||!BONK[bk]||S.lastDone!==todayStr()||S.recBonusD===todayStr()) return;
   const entries={};
   for(const e of BONK[bk]) entries[e.id]={sets:Array.from({length:recRows(e)},()=>({done:false}))};
-  S.session={kind:"rbonus",bk,entries};
+  S.session={kind:"rbonus",source:"fallback",startedAt:new Date().toISOString(),bk,entries};
   save(); go("workout");
 }
 
@@ -853,13 +908,15 @@ function startRecBonus(){
 function vWorkout(){
   if(!S.session){ go("quest"); return; }
   const k=S.session.kind;
+  if(k==="plan"){ vPlanSession(); return; }
   if(k==="cardio"){ vCardioSession(); return; }
   if(k==="rec"||k==="rbonus"){ vRecSession(); return; }
   if(k==="runsimple"||k==="ph"){ vSimpleGate(); return; }
   const key=S.session.key, v=S.session.v?1:0;
-  const lst=exListK(key,v);
+  const lst=sessionLifts();
   const cards=lst.map(e=>{
     const ent=S.session.entries[e.id];
+    if(!ent) return "";
     const rows=ent.sets.map((s,i)=> ent.cal ? `
       <div class="setrow ${s.done?'done':''}" >
         <span class="setnum">${i+1}</span>
@@ -867,9 +924,10 @@ function vWorkout(){
         <span class="xmark">lb ×</span>
         <input class="cin" type="number" inputmode="numeric" placeholder="reps" id="cr-${e.id}-${i}" value="${s.r||''}" oninput="S.session.entries['${e.id}'].sets[${i}].r=this.value===''?undefined:parseInt(this.value);save()">
         <button class="logbtn" onclick="logCal('${e.id}',${i})">${s.done?"✓ SET":"LOG"}</button>
+        <button class="skipbtn" onclick="skipSet('${e.id}',${i})">${s.skipped?"UNDO":"SKIP"}</button>
       </div>` : `
-      <div class="setrow ${s.done?'done':''}">
-        <span class="setnum">${i+1}</span>
+      <div class="setrow ${s.done?'done':''}${s.skipped?' skip':''}">
+        <span class="setnum">${s.skipped?"–":i+1}</span>
         <span class="wtag" onclick="editW('${e.id}',${i})">${e.bw?"body":fw(s.w)}<small> ${e.bw?"":"✎"}</small></span>
         <div class="repctl">
           <button onclick="adjR('${e.id}',${i},-1)">−</button>
@@ -877,6 +935,7 @@ function vWorkout(){
           <button onclick="adjR('${e.id}',${i},1)">+</button>
         </div>
         <button class="chk" onclick="togSet('${e.id}',${i})">✓</button>
+        ${e.bw?"":`<button class="skipbtn" onclick="skipSet('${e.id}',${i})">${s.skipped?"UNDO":"SKIP"}</button>`}
       </div>`).join("");
     return `<div class="excard">
       <div class="exhead"><span class="exname">${e.name}</span>
@@ -931,7 +990,7 @@ function askSub(){
     <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
 }
 function subRun(){
-  S.session={kind:"runsimple",name:"SUBSTITUTE — 20 MIN RUN/WALK",
+  S.session={kind:"runsimple",source:"fallback",startedAt:new Date().toISOString(),name:"SUBSTITUTE — 20 MIN RUN/WALK",
     desc:"Frisbee was cancelled. 20 minutes of running or brisk walking, then clear the gate.",subDone:true};
   save(); go("workout");
 }
@@ -943,7 +1002,10 @@ function subStretch(){
 function finishSimple(){
   const nm=sessTitle();
   S.quests++;
-  completeCommon(nm, prof().workXP, nm+" completed", "");
+  sealSession(nm, prof().workXP, nm+" completed", "", {
+    source:"fallback", kind:S.session.kind||"note", title:nm, date:todayStr(),
+    startedAt:S.session.startedAt||null, exercises:[], blocks:[]
+  }, []);
 }
 
 function togWu(i){
@@ -974,16 +1036,32 @@ function logCal(id,i){
   const r=parseInt(document.getElementById(`cr-${id}-${i}`).value);
   const wOk = e&&e.assist ? isFinite(w) : (w>0);
   if(!wOk||!(r>0)){ modal(`<h2>⚠ SYSTEM</h2><div>Enter the weight and reps you performed, then press LOG.${e&&e.assist?"<br><span class='muted'>Assisted: enter assist as a negative number.</span>":""}</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
-  const s=S.session.entries[id].sets[i]; s.w=w; s.r=r; s.done=true; save(); vWorkout();
+  const s=S.session.entries[id].sets[i]; s.w=w; s.r=r; s.done=true; s.skipped=false; s.at=new Date().toISOString(); save(); vWorkout();
 }
-function togSet(id,i){ const s=S.session.entries[id].sets[i]; s.done=!s.done; save(); vWorkout(); }
-function adjR(id,i,d){ const s=S.session.entries[id].sets[i]; s.r=Math.max(0,Math.min(60,s.r+d)); save(); vWorkout(); }
+function togSet(id,i){
+  const s=S.session.entries[id].sets[i];
+  s.done=!s.done;
+  if(s.done) s.skipped=false;
+  s.at=new Date().toISOString();
+  save(); vWorkout();
+}
+function skipSet(id,i){
+  const s=S.session.entries[id].sets[i];
+  s.skipped=!s.skipped;
+  if(s.skipped) s.done=false;
+  s.at=new Date().toISOString();
+  save(); vWorkout();
+}
+function adjR(id,i,d){ const s=S.session.entries[id].sets[i]; s.r=Math.max(0,Math.min(60,(Number(s.r)||0)+d)); s.at=new Date().toISOString(); save(); vWorkout(); }
 function editW(id,i){
   const e=exDef(id); if(e&&e.bw) return;
   const s=S.session.entries[id].sets[i];
   const v=prompt("Weight for this set (lb, negative = assist):", s.w);
   if(v===null) return; const w=parseFloat(v);
-  if(isFinite(w)){ s.w=w; save(); vWorkout(); }
+  if(isFinite(w)){
+    if(s.plannedW==null) s.plannedW=s.w;
+    s.w=w; s.at=new Date().toISOString(); save(); vWorkout();
+  }
 }
 let rpeCb=null;
 function askRPE(cb){
@@ -998,55 +1076,44 @@ function pickRPE(r){ const cb=rpeCb; rpeCb=null;
   closeModal(); if(cb) cb(r);
 }
 function finishQuest(){
-  const key=S.session.key, v=S.session.v?1:0;
-  const lst=exListK(key,v);
-  let setsDone=0, setsTotal=0, ton=0, det=[], progNotes=[];
+  const key=S.session.key;
+  const lst=sessionLifts();
+  let setsDone=0;
+  for(const e of lst) setsDone+=S.session.entries[e.id].sets.filter(s=>s.done).length;
+  if(!setsDone){ modal(`<h2>⚠ SYSTEM</h2><div>No sets logged. Complete at least one set.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
+  const bot=S.session.source==="bot";
+  const deload=isDeload() && !bot;
+  let ton=0; const det=[], progNotes=[], structuredEx=[];
   for(const e of lst){
     const ent=S.session.entries[e.id], st=exSt(e.id);
-    const done=ent.sets.filter(s=>s.done);
-    setsTotal+=e.sets; setsDone+=done.length;
-    if(!done.length){ det.push(`${e.name}: skipped`); continue; }
-    ton += done.reduce((a,s)=>a+Math.max(0,s.w)*s.r,0);
-    det.push(`${e.name}: `+done.map(s=>`${e.bw?"":s.w+"×"}${s.r}`).join(", "));
-    if(e.bw){
-      const minReps=Math.min(...done.map(s=>s.r));
-      if(done.length===e.sets && minReps>=e.hi) progNotes.push(`${e.name}: <b class="good">max reps — keep pushing</b>`);
-      else progNotes.push(`${e.name}: build toward ${e.hi} reps`);
-      st.calibrated=true;
-      continue;
-    }
-    const bestSet=done.reduce((a,s)=>e1rm(s.w,s.r)>e1rm(a.w,a.r)?s:a);
-    const best1=e1rm(bestSet.w,bestSet.r);
-    if(bestSet.w>0 && best1>st.best) st.best=Math.round(best1);
-    if(ent.cal){
-      if(e.assist){ st.weight=round5a(Math.max(...done.map(s=>s.w))); }
-      else { st.weight=round5(best1*0.95/(1+e.hi/30)); st.base=Math.round(best1); }
-      st.calibrated=true; st.fails=0;
-      progNotes.push(`${e.name}: calibrated → <b class="good">${fw(st.weight)}</b>`);
-    } else if(isDeload()){
-      progNotes.push(`${e.name}: deload week — held at ${fw(st.weight)}`);
-    } else {
-      const minReps=Math.min(...done.map(s=>s.r));
-      if(done.length===e.sets && minReps>=e.hi){
-        st.weight+=e.inc; st.fails=0;
-        progNotes.push(`${e.name}: <b class="good">+${e.inc} lb → ${fw(st.weight)}</b>`);
-      } else if(minReps<e.lo){
-        st.fails=(st.fails||0)+1;
-        if(st.fails>=2){
-          st.weight = e.assist ? round5a(st.weight-10) : round5(st.weight*0.9);
-          st.fails=0;
-          progNotes.push(`${e.name}: deload → ${fw(st.weight)}`);
-        } else progNotes.push(`${e.name}: hold at ${fw(st.weight)}`);
-      } else progNotes.push(`${e.name}: hold — push for ${e.hi} reps`);
-    }
+    const res=Logic.progressExercise({
+      exercise:e, sets:ent.sets, state:st,
+      calibrating:!!ent.cal, deload, bot
+    });
+    const before=JSON.stringify(st);
+    if(res.any) Object.assign(st, res.state);
+    if(JSON.stringify(st)!==before) st.updatedAt=new Date().toISOString();
+    ton+=res.ton;
+    det.push(res.det);
+    progNotes.push.apply(progNotes, res.notes);
+    structuredEx.push({exerciseId:e.id, sets:Logic.setsRecord(ent.sets)});
   }
-  if(!setsDone){ modal(`<h2>⚠ SYSTEM</h2><div>No sets logged. Complete at least one set.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
   if(LIFTS[key].ab.length>1) S.gateV[key]=S.gateV[key]?0:1;
   S.tonnage+=ton; S.quests++;
-  const _title=sessTitle(), _extra=`<div class="muted" style="text-align:left;font-size:12px;line-height:1.9">${progNotes.join("<br>")}</div>
+  const title=sessTitle();
+  const extra=`<div class="muted" style="text-align:left;font-size:12px;line-height:1.9">${progNotes.join("<br>")}</div>
      <div style="margin-top:10px">Volume moved: <b class="gold">${Math.round(ton).toLocaleString()} lb</b></div>`;
-  const _det=det.join("\n");
-  askRPE(function(r){ completeCommon(_title, prof().workXP, _det+" · RPE "+["","easy","ok","brutal"][r], _extra); });
+  const names=lst.map(e=>({exerciseId:e.id, name:e.name}));
+  askRPE(function(r){
+    const label=["","easy","ok","brutal"][r];
+    sealSession(title, prof().workXP, det.join("\n")+" · RPE "+label, extra, {
+      source: bot?"bot":"fallback", kind:"lift", title, date:todayStr(),
+      planDate: S.session.planDate||null, deload: !!isDeload(),
+      startedAt: S.session.startedAt||null, effort:r, effortLabel:label,
+      exercises: structuredEx, blocks: structuredEx.map(x=>({type:"lift", exerciseId:x.exerciseId, sets:x.sets})),
+      tonnage: Math.round(ton)
+    }, names);
+  });
 }
 
 /* ---------- cardio / recovery sessions ---------- */
@@ -1093,9 +1160,18 @@ function finishCardio(advance){
   S.cardioDone++;
   creditRun(Math.round(c.run*c.rounds));
   if(wasPool!==undefined){ poolState().used[wasPool]=true; save(); }
-  completeCommon("ENDURANCE TRAINING", prof().workXP, `Run/walk level ${lvl} completed`, `<div class="muted">${note}</div>`);
+  sealSession("ENDURANCE TRAINING", prof().workXP, `Run/walk level ${lvl} completed`, `<div class="muted">${note}</div>`, {
+    source:"fallback", kind:"cardio", title:"ENDURANCE TRAINING", date:todayStr(),
+    startedAt:S.session.startedAt||null, exercises:[],
+    blocks:[{type:"cardio", exerciseId:null, planned:{level:lvl}, actual:{level:lvl, advanced:!!advance, done:true, skipped:false}}]
+  }, []);
 }
-function recList(sess){ return sess.kind==="rbonus" ? BONK[sess.bk] : SGATES[sess.key].ex; }
+function recList(sess){
+  if(sess.kind==="rbonus") return BONK[sess.bk];
+  const list=stretchesFor(sess.key);
+  if(sess.entries && list.every(e=>sess.entries[e.id])) return list;
+  return (SGATES[sess.key] && SGATES[sess.key].ex) || list;
+}
 function recTitle(sess){ return sess.kind==="rbonus" ? "RECOVERY BONUS" : SGATES[sess.key].name; }
 function vRecSession(){
   if(TMR){ vTimer(); return; }
@@ -1123,7 +1199,7 @@ function vRecSession(){
         <button class="btn ghost" onclick="go('quest')">◂ BACK (progress saved)</button>
       </div></div>`;
 }
-function togRec(id,i){ const s=S.session.entries[id].sets[i]; s.done=!s.done; save(); vRecSession(); }
+function togRec(id,i){ const s=S.session.entries[id].sets[i]; s.done=!s.done; s.at=new Date().toISOString(); save(); vRecSession(); }
 function startRecTimer(){
   const lst=recList(S.session);
   const ph=[];
@@ -1146,10 +1222,22 @@ function startRecTimer(){
 function finishRec(){
   const sess=S.session, lst=recList(sess), bonus=sess.kind==="rbonus";
   let done=0, total=0, det=[];
+  const structuredEx=[];
   for(const e of lst){
+    const plannedAmount=recVal(e);
     const d=sess.entries[e.id].sets.filter(s=>s.done).length;
     total+=recRows(e); done+=d;
-    if(d===recRows(e)){ S.recN[e.id]=(S.recN[e.id]||0)+1; }
+    structuredEx.push({exerciseId:e.id, sets:(sess.entries[e.id].sets||[]).map((s,i)=>({
+      index:i,
+      planned:{sec:e.mode==="reps"?null:plannedAmount, reps:e.mode==="reps"?plannedAmount:null},
+      actual:{done:!!s.done, skipped:!s.done},
+      loggedAt:s.at||null
+    }))});
+    if(d===recRows(e)){
+      S.recN[e.id]=(S.recN[e.id]||0)+1;
+      S.recMeta=S.recMeta||{};
+      S.recMeta[e.id]=new Date().toISOString();
+    }
     det.push(`${e.name}: ${d}/${recRows(e)} × ${recLbl(e)}`);
   }
   if(!done){ modal(`<h2>⚠ SYSTEM</h2><div>Nothing logged. Complete at least one stretch.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
@@ -1159,20 +1247,34 @@ function finishRec(){
   S.recDone++;
   if(bonus){ S.recBonusD=todayStr(); }
   if(sess.pool!==undefined){ poolState().used[sess.pool]=true; save(); }
+  const stretchDoc={
+    source:"fallback", kind:bonus?"rbonus":"stretch", title:recTitle(sess), date:todayStr(),
+    startedAt:sess.startedAt||null, exercises:structuredEx,
+    blocks:structuredEx.map(x=>({type:"stretch", exerciseId:x.exerciseId, sets:x.sets}))
+  };
   if(bonus){
-    S.log.unshift({d:todayStr(), name:"RECOVERY BONUS", xp, det:det.join("\n")});
+    const entry={d:todayStr(), name:"RECOVERY BONUS", xp, det:det.join("\n")};
+    S.log.unshift(entry);
+    S.structLog=S.structLog||[];
+    stretchDoc.id=todayStr()+"-bonus-"+Date.now().toString(36);
+    stretchDoc.finishedAt=new Date().toISOString();
+    stretchDoc.xp=xp;
+    entry.id=stretchDoc.id;
+    S.structLog.unshift(stretchDoc);
     S.session=null; gainXp(xp); save();
+    if(window.Cloud && Cloud.writeSession) Cloud.writeSession(stretchDoc);
     modal(`<h2>⚠ BONUS CLEAR</h2><div class="big">+${xp} XP</div>
       <div class="muted">Flexibility is armor.</div>
       <button class="btn" onclick="finishClear()">COMPLETE</button>`);
     renderHeader();
   } else {
-    completeCommon(recTitle(sess), xp, det.join("\n"),
-      `<div class="muted">Flexibility is armor. Targets increase next visit.</div>`);
+    sealSession(recTitle(sess), xp, det.join("\n"),
+      `<div class="muted">Flexibility is armor. Targets increase next visit.</div>`,
+      stretchDoc, lst.map(e=>({exerciseId:e.id, name:e.name})));
   }
 }
 
-function completeCommon(name, xp, detail, extraHtml){
+function completeCommon(name, xp, detail, extraHtml, structured){
   const t=todayStr();
   if(S.lastDone!==t){
     const y=new Date(); y.setDate(y.getDate()-1);
@@ -1181,10 +1283,27 @@ function completeCommon(name, xp, detail, extraHtml){
     if(S.workStreak>S.workBestStreak) S.workBestStreak=S.workStreak;
   }
   S.lastDone=t;
-  S.log.unshift({d:t, name, xp, det:detail});
+  const entry={d:t, name, xp, det:detail};
+  if(structured){
+    if(!structured.id) structured.id=t+"-"+Date.now().toString(36);
+    if(!structured.finishedAt) structured.finishedAt=new Date().toISOString();
+    structured.xp=xp;
+    structured.title=structured.title||name;
+    structured.date=structured.date||t;
+    entry.id=structured.id;
+    S.structLog=S.structLog||[];
+    S.structLog.unshift(structured);
+    if(S.structLog.length>80) S.structLog.length=80;
+  }
+  S.log.unshift(entry);
   if(S.log.length>200) S.log.length=200;
+  const planDate=S.session && S.session.planDate;
+  const fromBot=S.session && S.session.source==="bot";
   S.session=null;
   gainXp(xp); save(); pushLB();
+  if(structured && window.Cloud && Cloud.writeSession) Cloud.writeSession(structured);
+  if(fromBot && planDate && window.Cloud && Cloud.markPlanStatus) Cloud.markPlanStatus(planDate, "completed");
+  if(window.Cloud && Cloud.catchUp) Cloud.catchUp();
   modal(`<h2>⚠ DUNGEON CLEAR</h2>
     <div class="big">+${xp} XP</div>
     ${extraHtml||""}
@@ -1210,6 +1329,7 @@ function currentStrengthRatio(){
   let sum=0,n=0;
   for(const id in S.ex){
     const v=S.ex[id]; if(!v.calibrated || !(v.weight>0)) continue;
+    if(S.profile==="hunter" && id==="bss") continue;
     const d=exDef(id); if(!d || d.bw || d.assist) continue;
     sum+=v.weight/bw; n++;
   }
@@ -1246,7 +1366,8 @@ function vStats(){
     ["FLEX — recovery gates (30d)",       Math.round(last30Rate(l=>l.name.startsWith("RECOVERY"))*100)],
     ["WILL — workout streak",             Math.min(100, S.workStreak*4+10)],
   ].filter(a=>S.daily.enabled || !a[0].startsWith("DISCIPLINE"));
-  const prs = Object.entries(S.ex).filter(([,v])=>v.calibrated)
+  const hidden=S.profile==="hunter"?{bss:1}:{};
+  const prs = Object.entries(S.ex).filter(([id,v])=>v.calibrated && !hidden[id])
     .map(([id,v])=>{const d=exDef(id); return d?`<div class="goalrow"><span class="gname">${d.name}</span><span class="gval">${fw(v.weight)} ${v.best?`<small style="color:var(--dim)">(e1RM ${v.best})</small>`:""}</span></div>`:"";}).join("");
   document.getElementById("view").innerHTML=`
     <div class="panel"><div class="ptitle"><div class="diamond"><span>i</span></div>STATUS WINDOW</div>
@@ -1402,9 +1523,10 @@ function addWeight(){
   if(!(v>0)) return;
   const t=todayStr();
   const existing=S.weights.find(w=>w.d===t);
-  if(existing) existing.lbs=v;
+  const stamped=new Date().toISOString();
+  if(existing){ existing.lbs=v; existing.updatedAt=stamped; }
   else{
-    S.weights.push({d:t,lbs:v});
+    S.weights.push({d:t,lbs:v,updatedAt:stamped});
     if(S.lastWeighXp!==t){
       S.lastWeighXp=t;
       const prev=S.weights.length>1?S.weights[S.weights.length-2].lbs:null;
@@ -1458,6 +1580,7 @@ function vSys(){
   document.getElementById("view").innerHTML=`
     <div class="panel"><div class="ptitle"><div class="diamond"><span class="gear">⚙</span></div>SYSTEM</div>
       <div class="pbody">
+        ${window.Cloud?Cloud.accountSection():""}
         <div class="sect">PLAYER</div>
         <div class="goalrow"><span class="gname">Name</span><span class="gval">${S.name||"—"}</span></div>
         <div class="goalrow"><span class="gname">Profile</span><span class="gval">${prof().lbl}</span></div>
@@ -1473,7 +1596,7 @@ function vSys(){
         <div class="muted" style="font-size:11px;line-height:1.6">A friendly roster of family and friends — shares only your hunter name, level, rank and streak, never workouts or weight. ${S.lbOpt?'<b class="good">You are in the guild.</b>':'You are not in the guild yet.'}</div>
         <button class="btn ghost" onclick="S.lbOpt=!S.lbOpt;save();if(S.lbOpt){lbLast=0;pushLB();}vSys()">${S.lbOpt?"LEAVE THE GUILD (stop sharing)":"JOIN THE GUILD"}</button>
         <div class="sect">BACKUP</div>
-        <div class="muted" style="font-size:11px;line-height:1.6">All data lives in this browser only. Export a backup occasionally.${S.lastBackup?` Last backup: ${S.lastBackup}.`:""}</div>
+        <div class="muted" style="font-size:11px;line-height:1.6">A copy stays on this device${window.Cloud&&Cloud.signedIn&&Cloud.signedIn()?", and the signed-in copy syncs across your phones":""}. Export a backup occasionally.${S.lastBackup?` Last backup: ${S.lastBackup}.`:""}</div>
         <button class="btn ghost" onclick="exportData();vSys()">EXPORT DATA (download file)</button>
         <div class="sect">RESTORE</div>
         <input type="file" id="impFile" accept=".json,application/json,text/plain" style="display:none" onchange="importFile(this)">
@@ -1502,6 +1625,10 @@ function importData(){
   try{
     const d=JSON.parse(document.getElementById("imp").value);
     if(typeof d.level!=="number") throw 0;
+    if(window.Cloud && Cloud.signedIn && Cloud.signedIn() && d.cloudUid && d.cloudUid!==Cloud.uid()){
+      modal(`<h2>⚠ SYSTEM</h2><div>This backup belongs to a different sign-in. Sign out before importing it, so it is not uploaded into the account you're using now.</div><button class="btn" onclick="closeModal()">OK</button>`);
+      return;
+    }
     S=Object.assign(defaultState(),d);
     if(!S.gateV) S.gateV={};
     if(Array.isArray(S.gateVar)){ S.gateV.hBack=S.gateVar[0]||0; S.gateV.hLegs=S.gateVar[1]||0; S.gateV.hSho=S.gateVar[2]||0; S.gateV.hChest=S.gateVar[4]||0; delete S.gateVar; }
@@ -1513,14 +1640,25 @@ function importData(){
   }
 }
 function resetAll(){
-  modal(`<h2>⚠ WARNING</h2><div>Erase ALL progress, history and calibration?<br><span class="muted">This cannot be undone.</span></div>
-    <button class="btn danger" onclick="S=defaultState();save();closeModal();renderHeader();go('quest')">ERASE EVERYTHING</button>
+  modal(`<h2>⚠ WARNING</h2><div>Erase ALL progress, history and calibration on this device?<br><span class="muted">This cannot be undone. A signed-in cloud copy is left in place and you are signed out, so an empty log is not uploaded over it.</span></div>
+    <button class="btn danger" onclick="if(window.Cloud&&Cloud.pausePush)Cloud.pausePush();S=defaultState();persist();if(window.Cloud&&Cloud.signOut)Cloud.signOut();closeModal();renderHeader();go('quest')">ERASE EVERYTHING</button>
     <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
 }
 
 /* ---------- boot ---------- */
 const VIEWS={quest:vQuest, workout:vWorkout, stats:vStats, weight:vWeight, log:vLog, sys:vSys};
 applyTheme(); renderHeader(); renderNav();
+if(!S.tz){ try{ S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){} }
+if(window.Cloud){
+  Cloud.onChange=function(){
+    const ovl=document.getElementById("ovl");
+    if(ovl && ovl.classList.contains("show")) return;
+    if(S.session && curView==="workout") return;
+    if(curView==="quest") vQuest();
+    else if(curView==="sys") vSys();
+  };
+  Cloud.start();
+}
 if(S.session) go("workout"); else go("quest");
 if(!S.name) askName(true);
 pushLB();

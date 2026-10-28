@@ -1,0 +1,77 @@
+rules_version = '2';
+// THE SYSTEM — deploy with `firebase deploy --only firestore:rules` after review.
+// The Admin SDK (the coach bot's service account) bypasses these rules.
+// A client signed in with custom claim admin=true or bot=true may also write plans.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function owns(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+    function isBot() {
+      return signedIn() && (request.auth.token.admin == true || request.auth.token.bot == true);
+    }
+
+    match /users/{uid} {
+      allow read, write: if owns(uid);
+
+      match /exercises/{id} {
+        allow read, write: if owns(uid);
+      }
+      match /stretch/{id} {
+        allow read, write: if owns(uid);
+      }
+      match /bodyweight/{id} {
+        allow read, write: if owns(uid);
+      }
+      match /sessions/{id} {
+        allow read, write: if owns(uid);
+      }
+      match /journal/{id} {
+        allow read, write: if owns(uid);
+      }
+      match /notes/{id} {
+        allow read, write: if owns(uid);
+      }
+
+      // Coach writes the plan. The phone may only mark how far the athlete got.
+      match /plans/{date} {
+        allow read: if owns(uid);
+        allow create, delete: if isBot();
+        allow update: if isBot() || (
+          owns(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'clientUpdatedAt'])
+          && request.resource.data.status in ['published', 'started', 'completed', 'skipped']
+        );
+      }
+    }
+
+    // Public roster: name, level, rank, streak. No workouts.
+    // Unsigned reads stay so the guild still loads before someone signs in.
+    // Writes are the signed-in user's own doc, keyed by uid — the old anonymous
+    // REST write stops working once these rules are deployed.
+    match /leaderboard/{entryId} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && request.auth.uid == entryId
+        && request.resource.data.keys().hasOnly(['name', 'level', 'rank', 'streak', 'updated', 'uid'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 14
+        && request.resource.data.level is int
+        && request.resource.data.level >= 0
+        && request.resource.data.level <= 10000
+        && request.resource.data.streak is int
+        && request.resource.data.streak >= 0
+        && request.resource.data.streak <= 100000
+        && request.resource.data.rank is string
+        && request.resource.data.rank.size() <= 8
+        && request.resource.data.updated is string
+        && request.resource.data.updated.size() <= 40;
+      allow delete: if signedIn() && request.auth.uid == entryId;
+    }
+  }
+}

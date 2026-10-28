@@ -205,6 +205,43 @@ const LIFTS={
 };
 function exListK(key,v){ const g=LIFTS[key]; return g.ab[(v&&g.ab.length>1)?1:0]; }
 
+/* Hunter (Adam) only. Other profiles keep Bulgarian split squats and the
+   deep split-squat stretch. Applied when a list is read, not by editing
+   the shared LIFTS / SGATES tables. */
+const HUNTER_LIFT_SWAP={
+  bss:{id:"revlunge", name:"Dumbbell Reverse Lunge", sets:3, lo:10, hi:12, inc:5,
+       note:"all reps per leg · dumbbells in hands · rear foot stays on the floor"}
+};
+const HUNTER_STRETCH_SWAP={ rsplit:"shipf" };
+function applyHunterLifts(profile, list){
+  if(!list) return [];
+  if(profile!=="hunter") return list.slice();
+  return list.map(e=>{
+    const sw=HUNTER_LIFT_SWAP[e.id];
+    return sw ? Object.assign({}, e, sw) : e;
+  });
+}
+function applyHunterStretches(profile, list){
+  if(!list) return [];
+  if(profile!=="hunter") return list.slice();
+  return list.map(e=>{
+    const id=HUNTER_STRETCH_SWAP[e.id];
+    return (id && STRETCH[id]) ? STRETCH[id] : e;
+  });
+}
+function findExercise(id){
+  if(!id) return null;
+  for(const k in HUNTER_LIFT_SWAP){
+    if(HUNTER_LIFT_SWAP[k].id===id) return HUNTER_LIFT_SWAP[k];
+  }
+  for(const gk in LIFTS){
+    for(const arr of LIFTS[gk].ab){
+      for(const e of arr) if(e.id===id) return e;
+    }
+  }
+  return null;
+}
+
 const CARDIO = [
  {run:1,  walk:2,  rounds:7}, {run:1.5,walk:1.5,rounds:7}, {run:2,  walk:1,  rounds:7},
  {run:3,  walk:1.5,rounds:5}, {run:4,  walk:1.5,rounds:4}, {run:5,  walk:2,  rounds:4},
@@ -334,3 +371,22 @@ const PROFILES={
            timed:[{n:"Walk",base:10,cap:25,per:6,kind:"run"}],
            workXP:240, deload:false},
 };
+
+/* Lift gates each profile has actually used. Legacy log lines are matched
+   to ids on these gates first, so "Romanian Deadlift" on hunter stays `rdl`
+   and does not attach to Joy's or Jocelyne's copy of the same name. */
+const PROFILE_GATES={
+  hunter:["pLower","pPush","pPull","pLegs","pUpper","hBack","hLegs","hSho","hChest"],
+  owen:["hBack","hLegs","hSho","hChest"],
+  joy:["joyA","joyU","joyB"],
+  jocelyne:["momUp","momLow"],
+  eileen:["eiFull"],
+  allison:["alFull"],
+  awakened:["hBack","hLegs","hSho","hChest"],
+  trainee:["hBack","hLegs","hSho","hChest"]
+};
+
+if(typeof module!=="undefined" && module.exports){
+  module.exports={LIFTS,STRETCH,SGATES,WEEKS,PROFILES,PROFILE_GATES,CARDIO,RANKS,BONK,WARMK,
+    HUNTER_LIFT_SWAP,HUNTER_STRETCH_SWAP,applyHunterLifts,applyHunterStretches,findExercise,exListK,SL};
+}
