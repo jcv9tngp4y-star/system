@@ -108,11 +108,27 @@ main{flex:1;padding:14px}
   background:rgba(0,0,0,.35);border:1px solid rgba(var(--prgb),.5);color:transparent;font-size:16px;font-family:inherit;
 }
 .setrow.done .chk{background:rgba(74,222,128,.18);border-color:var(--good);color:var(--good)}
+.setrow.skip{opacity:.55}
+.setrow.skip .setnum{color:var(--bad)}
+.skipbtn{background:none;border:none;color:var(--dim);font-size:9px;letter-spacing:1px;cursor:pointer;font-family:inherit;padding:4px}
+.chipline{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}
+.chip{font-size:10px;letter-spacing:1px;border:1px solid rgba(var(--prgb),.45);padding:6px 8px;color:var(--pb)}
+.chip input{margin-right:4px}
 .cin{
   width:64px;padding:7px 4px;background:rgba(0,0,0,.4);border:1px solid rgba(var(--prgb),.5);
   color:#fff;font-size:15px;text-align:center;font-family:inherit;border-radius:0;
 }
 .cin:focus{outline:none;border-color:var(--pb);box-shadow:0 0 8px rgba(var(--prgb),.4)}
+.cin.ifield{width:100%;text-align:left;margin-top:6px;padding-left:10px}
+.ichip{
+  font-family:inherit;cursor:pointer;background:transparent;
+  font-size:10px;letter-spacing:1px;border:1px solid rgba(var(--prgb),.45);
+  padding:8px 10px;color:var(--pb);
+}
+.ichip.on{color:#fff;border-color:var(--p);background:rgba(var(--pdrgb),.45);box-shadow:0 0 8px rgba(var(--prgb),.45)}
+.inlab{display:block;margin-top:12px;font-size:10px;letter-spacing:2px;color:var(--dim)}
+.inav{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.inav .btn{flex:1;margin-top:0}
 .logbtn{
   margin-left:auto;padding:7px 12px;background:rgba(var(--pdrgb),.35);border:1px solid var(--p);
   color:#fff;font-size:11px;letter-spacing:2px;cursor:pointer;font-family:inherit;

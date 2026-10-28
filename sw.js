@@ -1,36 +1,42 @@
-/* THE SYSTEM - offline cache v5 (app files only; API calls pass through untouched) */
-const CACHE = "system-v5";
-const ASSETS = ["./", "./index.html", "./styles.css", "./programs.js", "./manifest.json", "./icon-180.png", "./icon-512.png"];
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+/* THE SYSTEM - offline cache v7
+   App files are network-first so a publish actually reaches phones.
+   The previous cache-first path for programs.js/styles kept old programming forever.
+   Firebase SDK scripts are cached too, so a signed-in plan still opens in the gym. */
+const CACHE = "system-v7";
+const ASSETS = [
+  "./", "./index.html", "./styles.css", "./programs.js", "./logic.js", "./migrate.js",
+  "./plan.js", "./intake.js", "./cloud.js", "./intake-ui.js", "./manifest.json",
+  "./icon-180.png", "./icon-512.png"
+];
+const FBJS = [
+  "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js",
+  "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js",
+  "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"
+];
+
+function networkFirst(req){
+  return fetch(req).then(r=>{
+    const copy=r.clone();
+    caches.open(CACHE).then(c=>c.put(req, copy)).catch(()=>{});
+    return r;
+  }).catch(()=>caches.match(req).then(h=>h || caches.match("./index.html")));
+}
+
+self.addEventListener("install", e=>{
+  e.waitUntil(caches.open(CACHE).then(async c=>{
+    await c.addAll(ASSETS);
+    await Promise.all(FBJS.map(u=>c.add(u).catch(()=>{})));
+  }).then(()=>self.skipWaiting()));
 });
-self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ).then(() => self.clients.claim()));
+self.addEventListener("activate", e=>{
+  e.waitUntil(caches.keys().then(keys=>
+    Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))
+  ).then(()=>self.clients.claim()));
 });
-self.addEventListener("fetch", e => {
-  const url = new URL(e.request.url);
-  /* never touch non-GET requests or anything outside our own site (e.g. the guild database) */
-  if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
-  const isPage = e.request.mode === "navigate" || url.pathname.endsWith("/index.html") || url.pathname.endsWith("/");
-  if (isPage) {
-    e.respondWith(
-      fetch(e.request).then(r => {
-        const copy = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-        return r;
-      }).catch(() => caches.match(e.request).then(h => h || caches.match("./index.html")))
-    );
-  } else {
-    e.respondWith(
-      caches.match(e.request).then(hit => hit ||
-        fetch(e.request).then(r => {
-          const copy = r.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
-          return r;
-        })
-      )
-    );
-  }
+self.addEventListener("fetch", e=>{
+  const url=new URL(e.request.url);
+  if(e.request.method!=="GET") return;
+  const firebaseJs = url.origin==="https://www.gstatic.com" && url.pathname.indexOf("/firebasejs/")>=0;
+  if(!firebaseJs && url.origin!==self.location.origin) return;
+  e.respondWith(networkFirst(e.request));
 });

@@ -16,7 +16,11 @@ data, re-upload index.html, done. No engine changes needed for program edits.
 - `const PROFILES=` — per person: daily quest items + scaling, penalty, workXP, deload on/off
 
 ## People
-- hunter  = ADAM   (5-day gym, 50/50/50 + run 15→30, workXP 250, deload yes)
+- hunter  = ADAM   (5-day gym, 50/50/50 + run 15→30, workXP 250, deload yes).
+  For this profile only, Bulgarian split squats are swapped to dumbbell reverse lunges
+  (`revlunge`) and the Deep Split Squat stretch is swapped to the standing hip-flexor
+  lunge (`shipf`). Other profiles still use `bss` and `rsplit`. Coach-written days
+  override this week when a plan exists; see BOT_API.md.
 - owen    = OWEN   (same; Tuesday = placeholder leg day. To fill it in: change
                     WEEKS.owen[1] from {t:"ph"...} to L("owLegs") and add an
                     `owLegs` entry to LIFTS with his exercises.)
