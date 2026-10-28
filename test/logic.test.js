@@ -530,7 +530,7 @@ test("daily quest rises once a week and holds under four clears", ()=>{
   assert.equal(Logic.recordQuestClear(restarted, "2026-11-30", curve).clears.length, 0);
 });
 
-test("a published plan previews as read-only blocks", ()=>{
+test("a published plan previews as one line per block", ()=>{
   const view = Logic.planPreview({
     title:"Upper Push",
     notes:"Stop if the shoulder bites.",
@@ -547,18 +547,34 @@ test("a published plan previews as read-only blocks", ()=>{
   });
   assert.equal(view.title, "Chest, shoulders & triceps");
   assert.equal(view.notes, "Stop if the shoulder bites.");
-  assert.equal(view.blocks[0].lines[0], "150 lb × 6–8");
-  assert.equal(view.blocks[0].lines[1], "140 lb × 8–10");
-  assert.match(view.blocks[1].lines[0], /Doorway Pec Stretch · 2×45s · per side/);
-  assert.deepEqual(view.blocks[2].lines, ["20 min"]);
-  assert.equal(view.blocks[3].lines[0], "made · 20 makes");
+  assert.deepEqual(view.rows[0], {name:"Barbell Bench Press", value:"1 × 6–8 @ 150 lb · 1 × 8–10 @ 140 lb"});
+  assert.deepEqual(view.rows[1], {name:"Doorway Pec Stretch", value:"1 move"});
+  assert.deepEqual(view.rows[2], {name:"Easy bike", value:"20 min"});
+  assert.deepEqual(view.rows[3], {name:"Free throws", value:"20 makes"});
+  const ranged = Logic.planPreview({
+    title:"Legs",
+    blocks:[{type:"lift", name:"Barbell Back Squat", sets:[
+      {weight:130, repsLo:6, repsHi:10},
+      {weight:130, repsLo:6, repsHi:10},
+      {weight:130, repsLo:6, repsHi:10},
+      {weight:130, repsLo:6, repsHi:10}
+    ]}]
+  });
+  assert.equal(ranged.rows[0].value, "4 × 6–10 @ 130 lb");
+  const wordy = Logic.planPreview({
+    title:"Notes",
+    notes:("Stop if the shoulder bites. ").repeat(8).trim(),
+    blocks:[]
+  });
+  assert.ok(wordy.notes.length<=90);
+  assert.ok(wordy.notes.endsWith("…"));
   const empty = Logic.planPreview({title:"Empty", blocks:[]});
   assert.equal(empty.title, "Empty");
-  assert.equal(empty.blocks.length, 0);
+  assert.equal(empty.rows.length, 0);
   assert.equal(Logic.planPreview(null), null);
 });
 
-test("Oct 29 deadlift plan is shown in full and beats the standard week", ()=>{
+test("Oct 29 deadlift plan previews as compact rows and beats the standard week", ()=>{
   const plan = {
     date:"2026-10-29",
     status:"published",
@@ -597,30 +613,22 @@ test("Oct 29 deadlift plan is shown in full and beats the standard week", ()=>{
     ]
   };
   const view = Logic.planPreview(plan);
-  assert.equal(view.blocks.length, 9);
+  assert.equal(view.rows.length, 9);
   assert.equal(view.title, "Legs (deadlift day) · easy start");
   assert.equal(view.notes, "Easy start. Stop if the back bites.");
-  assert.equal(view.blocks[0].name, "Warm-up");
-  assert.deepEqual(view.blocks[0].lines, ["5 min"]);
-  assert.equal(view.blocks[0].note, "easy bike");
-  assert.equal(view.blocks[1].name, "Shoulder prehab");
-  assert.match(view.blocks[1].lines[0], /Band external rotation · 2×15 reps · per side/);
-  assert.match(view.blocks[1].lines[1], /Wall slides · 2×30s/);
-  assert.equal(view.blocks[2].lines[0], "75 lb × 8 · warm-up");
-  assert.equal(view.blocks[2].lines[1], "95 lb × 8");
-  assert.equal(view.blocks[2].lines[2], "95 lb × 8");
-  assert.deepEqual(view.blocks[2].swaps, ["Dumbbell RDL (if the back is cranky)"]);
-  assert.equal(view.blocks[3].lines[0], "90 lb × 8");
-  assert.equal(view.blocks[3].lines.length, 2);
-  assert.equal(view.blocks[4].lines[0], "60 lb × 10");
-  assert.equal(view.blocks[4].lines.length, 2);
-  assert.equal(view.blocks[5].note, "light");
-  assert.equal(view.blocks[5].lines[0], "10 lb × 15 · per arm");
-  assert.match(view.blocks[6].lines[0], /Dead bug · 2×8 reps · per side · slow/);
-  assert.equal(view.blocks[7].optional, true);
-  assert.equal(view.blocks[7].lines[0], "timed · 300s");
-  assert.equal(view.blocks[7].note, "only if fresh");
-  assert.match(view.blocks[8].lines[0], /Pigeon · 2×45s · per side/);
+  assert.deepEqual(view.rows, [
+    {name:"Warm-up: easy bike", value:"5 min"},
+    {name:"Shoulder prehab", value:"2 moves"},
+    {name:"Romanian Deadlift", value:"2 × 8 @ 95 lb · warm-up 75 lb"},
+    {name:"Hack Squat", value:"2 × 8 @ 90 lb"},
+    {name:"Lying Leg Curl", value:"2 × 10 @ 60 lb"},
+    {name:"Cable External Rotation", value:"2 × 15 @ 10 lb · per arm"},
+    {name:"Core", value:"1 move"},
+    {name:"Form shooting", value:"5 min · optional"},
+    {name:"Cool-down", value:"1 move"}
+  ]);
+  assert.equal(view.rows[2].value.indexOf("75 lb × 8"), -1);
+  assert.ok(!/Pigeon|Dead bug|cranky|Wall slides/.test(JSON.stringify(view.rows)));
 
   const rows = Logic.weekAhead({
     today:"2026-10-28",

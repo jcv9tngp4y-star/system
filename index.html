@@ -20,10 +20,10 @@
     <noscript>
       <div style="border:1px solid #f87171;padding:16px;margin-top:20px;color:#f87171;text-align:center;letter-spacing:2px;font-size:13px">
         ⚠ JAVASCRIPT IS DISABLED IN THIS VIEWER<br>
-        <span style="font-size:11px;color:#9f8bc9">This app needs a viewer that runs JavaScript.</span>
+        <span style="font-size:11px;color:var(--dim)">This app needs a viewer that runs JavaScript.</span>
       </div>
     </noscript>
-    <div id="bootmsg" style="text-align:center;padding:40px 10px;color:#9f8bc9;letter-spacing:3px;font-size:12px">INITIALIZING…</div>
+    <div id="bootmsg" style="text-align:center;padding:40px 10px;color:var(--dim);letter-spacing:3px;font-size:12px">INITIALIZING…</div>
   </main>
 </div>
 <nav id="nav"></nav>
@@ -917,18 +917,14 @@ function previewWeekHtml(row){
     ${previewClose()}`;
 }
 function previewPlanHtml(view, row){
-  const blocks=view.blocks.map(b=>{
-    const tag=b.optional ? "OPTIONAL" : (b.type==="lift" ? (b.lines.length===1?"1 SET":b.lines.length+" SETS") : (b.type||"block").toUpperCase());
-    const lines=b.lines.map(line=>`<div class="goalrow"><span class="gname">${esc(line)}</span></div>`).join("");
-    const swaps=b.swaps&&b.swaps.length?`<div class="muted" style="font-size:10px">Swap: ${b.swaps.map(esc).join(" · ")}</div>`:"";
-    return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.name)}</span><span class="extag">${esc(tag)}</span></div>
-      ${b.note?`<div class="muted" style="font-size:10px;margin-bottom:4px">${esc(b.note)}</div>`:""}
-      ${lines}${swaps}</div>`;
-  }).join("");
+  const rows=(view.rows||[]).map(r=>
+    `<div class="goalrow"><span class="gname">${esc(r.name)}</span><span class="gval">${esc(r.value)}</span></div>`
+  ).join("");
+  const note=view.notes?`<div class="preview-note">${esc(view.notes)}</div>`:"";
   return `<h2>${esc(view.title)}</h2>
     <div class="muted">${esc(row.label)} · ${esc(row.when)}</div>
-    ${view.notes?`<div class="muted" style="font-size:11px;margin:8px 0">${esc(view.notes)}</div>`:""}
-    <div style="text-align:left;margin-top:8px">${blocks}</div>
+    ${note}
+    <div style="text-align:left;margin-top:8px">${rows}</div>
     ${previewClose()}`;
 }
 function previewDay(date){
