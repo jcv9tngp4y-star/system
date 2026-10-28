@@ -565,45 +565,108 @@ function questStatus(quest, today, curve){
   return {week, startDate:q.startDate, reps, nextReps, timed, nextTimed, atCap};
 }
 
-/* Read-only lines for a published plan. Null when the document has nothing to run. */
-function planPreview(raw){
-  const norm=normalizePlan(raw);
-  if(!norm) return null;
-  const blocks=norm.blocks.map(b=>{
-    if(b.type==="lift"){
-      const lines=(b.sets||[]).map(s=>{
-        const lo=s.repsLo, hi=s.repsHi;
-        const range=lo!=null && hi!=null && lo!==hi ? (lo+"–"+hi) : String(hi!=null?hi:(lo!=null?lo:""));
-        let w="BW";
-        if(s.weight!=null && s.weight!=="" && isFinite(Number(s.weight))){
-          const n=Number(s.weight);
-          w=n<0 ? Math.abs(n)+" lb assist" : n+" lb";
-        }
-        return w+" × "+range;
-      });
-      return {type:"lift", name:b.name||b.exerciseId||"Lift", lines};
-    }
-    if(b.type==="stretch"){
-      const lines=(b.items||[]).map(it=>{
-        const dose=it.mode==="reps" ? (it.sets+"×"+(it.reps||0)+" reps") : (it.sets+"×"+(it.sec||0)+"s");
-        return (it.name||it.exerciseId||"Stretch")+" · "+dose+(it.perSide?" · L/R":"");
-      });
-      return {type:"stretch", name:b.title||b.name||"Prehab", lines};
-    }
-    if(b.type==="cardio"){
-      return {type:"cardio", name:b.name||"Cardio", lines:[String(b.minutes||0)+" min"]};
-    }
-    if(b.type==="skill"){
-      const goal=b.mode==="timed"
-        ? ((b.seconds!=null?b.seconds:0)+"s")
-        : (b.targetMakes!=null ? b.targetMakes+" makes" : "makes");
-      return {type:"skill", name:b.name||"Skill", lines:[(b.mode||"skill")+" · "+goal]};
-    }
-    return null;
+function previewText(v){
+  return v==null ? "" : String(v).trim();
+}
+function previewWeightText(w){
+  if(w==null || w==="" || !isFinite(Number(w))) return "BW";
+  const n=Number(w);
+  return n<0 ? Math.abs(n)+" lb assist" : n+" lb";
+}
+function previewRepText(s){
+  const reps=s && s.reps!=null ? s.reps : null;
+  const lo=s && s.repsLo!=null ? s.repsLo : reps;
+  const hi=s && s.repsHi!=null ? s.repsHi : reps;
+  if(lo==null && hi==null) return "";
+  if(lo!=null && hi!=null && Number(lo)!==Number(hi)) return lo+"–"+hi;
+  return String(hi!=null ? hi : lo);
+}
+function previewSide(s){
+  if(!s) return "";
+  if(s.perArm || s.per==="arm" || s.per==="per arm") return "per arm";
+  if(s.perSide || s.per==="side" || s.per==="per side") return "per side";
+  if(typeof s.per==="string" && previewText(s.per)) return previewText(s.per);
+  return "";
+}
+function previewSetLine(s){
+  if(!s || typeof s!=="object") return "";
+  const reps=previewRepText(s);
+  const bits=[previewWeightText(s.weight)+(reps?" × "+reps:"")];
+  if(previewText(s.note)) bits.push(previewText(s.note));
+  const side=previewSide(s);
+  if(side) bits.push(side);
+  return bits.join(" · ");
+}
+function previewStretchLine(it){
+  if(!it || typeof it!=="object") return "";
+  const sets=it.sets!=null ? it.sets : (it.holds!=null ? it.holds : 1);
+  const repsMode=it.mode==="reps" || (it.reps!=null && it.sec==null);
+  const dose=repsMode
+    ? sets+"×"+(it.reps!=null?it.reps:0)+" reps"
+    : sets+"×"+(it.sec!=null?it.sec:0)+"s";
+  const bits=[previewText(it.name)||previewText(it.exerciseId)||"Stretch", dose];
+  const side=previewSide(it);
+  if(side) bits.push(side);
+  if(previewText(it.note)) bits.push(previewText(it.note));
+  return bits.join(" · ");
+}
+function previewSwaps(b){
+  return (Array.isArray(b && b.swaps) ? b.swaps : []).map(sw=>{
+    if(!sw) return "";
+    const name=previewText(sw.name)||previewText(sw.exerciseId);
+    const note=previewText(sw.note);
+    if(!name) return "";
+    return note ? name+" ("+note+")" : name;
   }).filter(Boolean);
+}
+/* Read-only view of a plan document. This does not use the runnable-plan
+   filter, so a warm-up note, an optional drill, or a stretch without an id
+   still shows. Null only when there is no document. */
+function previewBlock(b){
+  if(!b || typeof b!=="object") return null;
+  const type=b.type==="prehab" ? "stretch" : (b.type||"block");
+  const note=previewText(b.note)||previewText(b.notes);
+  const optional=!!b.optional;
+  const swaps=previewSwaps(b);
+  if(type==="lift"){
+    return {
+      type, name:previewText(b.name)||previewText(b.exerciseId)||"Lift",
+      lines:(Array.isArray(b.sets)?b.sets:[]).map(previewSetLine).filter(Boolean),
+      note, optional, swaps
+    };
+  }
+  if(type==="stretch"){
+    const items=Array.isArray(b.items) && b.items.length ? b.items : [b];
+    return {
+      type, name:previewText(b.title)||previewText(b.name)||"Prehab",
+      lines:items.map(previewStretchLine).filter(Boolean),
+      note, optional, swaps
+    };
+  }
+  if(type==="cardio"){
+    const mins=b.minutes!=null ? b.minutes : (b.min!=null ? b.min : 0);
+    return {type, name:previewText(b.name)||"Cardio", lines:[String(mins)+" min"], note, optional, swaps};
+  }
+  if(type==="skill"){
+    const timed=b.mode==="timed" || (b.seconds!=null && b.mode!=="made");
+    const goal=timed
+      ? (b.seconds!=null ? b.seconds+"s" : "timed")
+      : (b.targetMakes!=null ? b.targetMakes+" makes" : "makes");
+    const mode=b.mode || (timed ? "timed" : "made");
+    return {type, name:previewText(b.name)||"Skill", lines:[mode+" · "+goal], note, optional, swaps};
+  }
   return {
-    title:friendlyWorkoutName(norm.title)||norm.title||"Coach plan",
-    notes:norm.notes||"",
+    type, name:previewText(b.name)||previewText(b.title)||type,
+    lines:note ? [note] : [],
+    note:"", optional, swaps
+  };
+}
+function planPreview(raw){
+  if(!raw || typeof raw!=="object") return null;
+  const blocks=(Array.isArray(raw.blocks)?raw.blocks:[]).map(previewBlock).filter(Boolean);
+  return {
+    title:friendlyWorkoutName(previewText(raw.title))||previewText(raw.title)||"Coach plan",
+    notes:previewText(raw.notes),
     blocks
   };
 }
