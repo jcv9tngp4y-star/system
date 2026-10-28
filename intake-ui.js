@@ -37,14 +37,14 @@ function intakeHarvest(){
   if(!intakeDraft) return;
   const g=intakeVal("inGoalsNote"); if(g!=null) intakeDraft.goalsNote=g;
   const eq=intakeVal("inEquip"); if(eq!=null) intakeDraft.equipmentNote=eq;
-  const age=intakeVal("inAge"); if(age!=null) intakeDraft.age=age===""?null:Number(age);
-  const feet=intakeVal("inFeet"); if(feet!=null) intakeDraft.height.feet=feet===""?null:Number(feet);
-  const inches=intakeVal("inInches"); if(inches!=null) intakeDraft.height.inches=inches===""?null:Number(inches);
-  const cm=intakeVal("inCm"); if(cm!=null) intakeDraft.height.cm=cm===""?null:Number(cm);
-  const w=intakeVal("inWeight"); if(w!=null) intakeDraft.weight.value=w===""?null:Number(w);
+  const age=intakeVal("inAge"); if(age!=null) intakeDraft.age=intakeNum(age, true);
+  const feet=intakeVal("inFeet"); if(feet!=null) intakeDraft.height.feet=intakeNum(feet, true);
+  const inches=intakeVal("inInches"); if(inches!=null) intakeDraft.height.inches=intakeNum(inches, true);
+  const cm=intakeVal("inCm"); if(cm!=null) intakeDraft.height.cm=intakeNum(cm, false);
+  const w=intakeVal("inWeight"); if(w!=null) intakeDraft.weight.value=intakeNum(w, false);
   const inj=intakeVal("inInj"); if(inj!=null) intakeDraft.injuries.note=inj;
   const dis=intakeVal("inDislike"); if(dis!=null) intakeDraft.disliked=dis;
-  const pu=intakeVal("inPush"); if(pu!=null) intakeDraft.baseline.pushups=pu===""?null:Number(pu);
+  const pu=intakeVal("inPush"); if(pu!=null) intakeDraft.baseline.pushups=intakeNum(pu, true);
   const lift=intakeVal("inLift"); if(lift!=null) intakeDraft.baseline.recentLift=lift;
   const cardio=intakeVal("inCardio"); if(cardio!=null) intakeDraft.cardio=cardio;
   const nut=intakeVal("inNutrition"); if(nut!=null) intakeDraft.nutrition=nut;
@@ -124,11 +124,22 @@ function intakeSubmit(){
   });
 }
 
+function intakeNum(raw, whole){
+  if(raw==null) return null;
+  const s=String(raw).trim();
+  if(s==="") return null;
+  const n=whole ? parseWhole(s) : parseNum(s);
+  return isFinite(n) ? n : null;
+}
 function intakeField(id, label, value, kind, placeholder){
   const v = value==null ? "" : String(value);
-  const type = kind==="number" ? "number" : "text";
+  const attrs = kind==="whole"
+    ? 'type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"'
+    : kind==="decimal"
+      ? 'type="text" inputmode="decimal" autocomplete="off"'
+      : 'type="text"';
   return `<label class="inlab" for="${id}">${label}</label>
-    <input class="cin ifield" id="${id}" type="${type}" ${kind==="number"?'inputmode="decimal"':""} placeholder="${placeholder||""}" value="${typeof esc==="function"?esc(v):v}">`;
+    <input class="cin ifield" id="${id}" ${attrs} placeholder="${placeholder||""}" value="${typeof esc==="function"?esc(v):v}">`;
 }
 function intakeArea(id, label, value, placeholder){
   const v = value==null ? "" : String(value);
@@ -166,12 +177,12 @@ function intakeBody(){
     const h=d.height||{};
     const w=d.weight||{};
     const heightFields = h.unit==="cm"
-      ? intakeField("inCm", "Centimetres", h.cm, "number", "cm")
-      : `<div class="wrow">${intakeField("inFeet", "Feet", h.feet, "number", "ft")}${intakeField("inInches", "Inches", h.inches, "number", "in")}</div>`;
+      ? intakeField("inCm", "Centimetres", h.cm, "decimal", "cm")
+      : `<div class="wrow">${intakeField("inFeet", "Feet", h.feet, "whole", "ft")}${intakeField("inInches", "Inches", h.inches, "whole", "in")}</div>`;
     return `<div class="qsub">A little about you. Skip anything you'd rather not answer.</div>
       <div class="inlab">Experience</div>
       ${intakeChips("experience", O.experience, d.experience, false)}
-      ${intakeField("inAge", "Age", d.age, "number", "optional")}
+      ${intakeField("inAge", "Age", d.age, "whole", "optional")}
       <div class="inlab">Sex</div>
       ${intakeChips("sex", O.sex, d.sex, false)}
       <div class="inlab">Height</div>
@@ -179,7 +190,7 @@ function intakeBody(){
       ${heightFields}
       <div class="inlab">Weight</div>
       ${intakeChips("wunit", [{id:"lb", label:"lb"}, {id:"kg", label:"kg"}], w.unit, false)}
-      ${intakeField("inWeight", w.unit==="kg"?"Kilograms":"Pounds", w.value, "number", w.unit)}`;
+      ${intakeField("inWeight", w.unit==="kg"?"Kilograms":"Pounds", w.value, "decimal", w.unit)}`;
   }
   if(intakeStep===4){
     return `<div class="qsub">Anything that should change the plan — pain, old injuries, movements you dislike.</div>
@@ -193,7 +204,7 @@ function intakeBody(){
     return `<div class="qsub">A rough starting point is enough. "Not sure" is a fine answer.</div>
       <div class="inlab">Push-ups in a row</div>
       ${intakeChips("notsure", [{id:"x", label:b.notSure?"NOT SURE — TAP TO CLEAR":"NOT SURE"}], b.notSure?"x":"", false)}
-      ${b.notSure ? "" : intakeField("inPush", "How many", b.pushups, "number", "or leave blank")}
+      ${b.notSure ? "" : intakeField("inPush", "How many", b.pushups, "whole", "or leave blank")}
       ${intakeField("inLift", "A recent lift, if you know one", b.recentLift, "text", "Bench 135×8, or a goblet squat")}
       ${intakeArea("inCardio", "Cardio right now", d.cardio, "Can walk 30 minutes, or a 2 mile jog…")}`;
   }

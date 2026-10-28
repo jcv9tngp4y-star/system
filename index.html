@@ -156,16 +156,18 @@ function customGoal(){
   modal(`<h2>⚠ SET GOAL</h2><div class="muted">Choose any length.</div>
     <div style="display:flex;gap:10px;justify-content:center;align-items:flex-end;margin:16px 0">
       <div><div class="muted" style="font-size:10px;letter-spacing:2px">DAYS</div>
-        <input class="cin" id="gD" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="14" value="${d}" style="width:78px;font-size:22px;padding:10px 4px"></div>
+        <input class="cin" id="gD" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${d}" style="width:78px;font-size:22px;padding:10px 4px"></div>
       <div><div class="muted" style="font-size:10px;letter-spacing:2px">HOURS</div>
-        <input class="cin" id="gH" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="23" value="${h}" style="width:78px;font-size:22px;padding:10px 4px"></div>
+        <input class="cin" id="gH" type="text" inputmode="decimal" autocomplete="off" value="${h}" style="width:78px;font-size:22px;padding:10px 4px"></div>
     </div>
     <button class="btn" onclick="saveGoal()">SET GOAL</button>
     <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
 }
 function saveGoal(){
   const dEl=document.getElementById("gD"), hEl=document.getElementById("gH");
-  const d=parseInt(dEl&&dEl.value||0,10)||0, h=parseFloat(hEl&&hEl.value||0)||0;
+  const dRaw=parseWhole(dEl&&dEl.value), hRaw=parseNum(hEl&&hEl.value);
+  const d=Math.min(14, Math.max(0, isFinite(dRaw)?dRaw:0));
+  const h=Math.min(23, Math.max(0, isFinite(hRaw)?hRaw:0));
   const total=d*24+h;
   if(!(total>0)){ modal(`<h2>⚠ SYSTEM</h2><div>Set a goal longer than zero.</div><button class="btn" onclick="customGoal()">BACK</button>`); return; }
   S.fastTarget=Math.min(336,total); save(); closeModal(); vWeight();
@@ -455,7 +457,7 @@ function completeDaily(){
   if(!S.daily.parts.every((v,j)=>v>=goals[j])) return;
   const t=todayStr(), items=dqItems(), p=prof();
   const kmEl=document.getElementById("dkm");
-  if(kmEl){ const km=parseFloat(kmEl.value); if(km>0 && km>S.daily.bestKm) S.daily.bestKm=km; }
+  if(kmEl){ const km=parseNum(kmEl.value); if(km>0 && km>S.daily.bestKm) S.daily.bestKm=km; }
   const y=new Date(); y.setDate(y.getDate()-1);
   const yStr=y.toLocaleDateString("en-CA");
   const prev=S.daily.lastComplete;
@@ -726,7 +728,7 @@ function vQuest(){
       }).join("")
         + (items.some(i=>i.dist)?`<div class="wrow" style="margin-top:8px">
             <span class="muted" style="font-size:11px">Distance (km, optional)</span>
-            <input class="cin" type="number" inputmode="decimal" step="0.1" id="dkm" placeholder="${S.daily.bestKm||'km'}">
+            <input class="cin" type="text" inputmode="decimal" autocomplete="off" id="dkm" placeholder="${S.daily.bestKm||'km'}">
           </div>`:"")
         + `<div class="muted" style="font-size:10px;text-align:center;margin-top:10px">Count as you go — clears itself when every target is hit · cleared ${S.daily.count}×</div>`;
     }
@@ -955,9 +957,10 @@ function vWorkout(){
     const rows=ent.sets.map((s,i)=> ent.cal ? `
       <div class="setrow ${s.done?'done':''}" >
         <span class="setnum">${i+1}</span>
-        <input class="cin" type="number" inputmode="decimal" placeholder="${e.assist?"±lb":"lb"}" id="cw-${e.id}-${i}" value="${s.w||''}" oninput="S.session.entries['${e.id}'].sets[${i}].w=this.value===''?undefined:parseFloat(this.value);save()">
+        ${e.assist?`<button class="skipbtn" onclick="flipCalSign('${e.id}',${i})">±</button>`:""}
+        <input class="cin" type="text" inputmode="decimal" autocomplete="off" placeholder="${e.assist?"±lb":"lb"}" id="cw-${e.id}-${i}" value="${s.w==null?"":s.w}" oninput="setCalW('${e.id}',${i},this.value)">
         <span class="xmark">lb ×</span>
-        <input class="cin" type="number" inputmode="numeric" placeholder="reps" id="cr-${e.id}-${i}" value="${s.r||''}" oninput="S.session.entries['${e.id}'].sets[${i}].r=this.value===''?undefined:parseInt(this.value);save()">
+        <input class="cin" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="reps" id="cr-${e.id}-${i}" value="${s.r==null?"":s.r}" oninput="setCalR('${e.id}',${i},this.value)">
         <button class="logbtn" onclick="logCal('${e.id}',${i})">${s.done?"✓ SET":"LOG"}</button>
         <button class="skipbtn" onclick="skipSet('${e.id}',${i})">${s.skipped?"UNDO":"SKIP"}</button>
       </div>` : `
@@ -1065,10 +1068,49 @@ function addDailyCredit(idx,n){
   const g=dailyGoals();
   S.daily.parts[idx]=Math.min(g[idx], (S.daily.parts[idx]||0)+n); save();
 }
+function setCalW(id,i,v){
+  const n=parseNum(v);
+  S.session.entries[id].sets[i].w=(String(v).trim()==="" || !isFinite(n)) ? undefined : n;
+  save();
+}
+function setCalR(id,i,v){
+  const n=parseWhole(v);
+  S.session.entries[id].sets[i].r=(String(v).trim()==="" || !isFinite(n)) ? undefined : n;
+  save();
+}
+function flipSignEl(el){
+  if(!el) return;
+  const raw=String(el.value||"").trim();
+  const n=parseNum(raw);
+  if(!isFinite(n) || n===0) el.value = raw.startsWith("-") ? raw.slice(1) : ("-"+raw);
+  else el.value=String(-n);
+}
+function flipCalSign(id,i){
+  const el=document.getElementById("cw-"+id+"-"+i);
+  flipSignEl(el);
+  if(el) setCalW(id,i,el.value);
+}
+function askWeight(current, cb){
+  const shown=current==null || current==="" ? "" : String(current);
+  modal(`<h2>⚠ WEIGHT</h2>
+    <div class="muted">Pounds. Use ± if the load is assistance.</div>
+    <input class="cin" id="wEdit" type="text" inputmode="decimal" autocomplete="off" value="${esc(shown)}" style="width:70%;font-size:22px;margin:12px 0">
+    <button class="btn ghost" onclick="flipSignEl(document.getElementById('wEdit'))">± ASSIST</button>
+    <button class="btn" id="wSave">SET WEIGHT</button>
+    <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
+  const el=document.getElementById("wEdit");
+  document.getElementById("wSave").onclick=function(){
+    const w=parseNum(el.value);
+    if(!isFinite(w)) return;
+    closeModal();
+    cb(w);
+  };
+  if(el) el.focus();
+}
 function logCal(id,i){
   const e=exDef(id);
-  const w=parseFloat(document.getElementById(`cw-${id}-${i}`).value);
-  const r=parseInt(document.getElementById(`cr-${id}-${i}`).value);
+  const w=parseNum(document.getElementById(`cw-${id}-${i}`).value);
+  const r=parseWhole(document.getElementById(`cr-${id}-${i}`).value);
   const wOk = e&&e.assist ? isFinite(w) : (w>0);
   if(!wOk||!(r>0)){ modal(`<h2>⚠ SYSTEM</h2><div>Enter the weight and reps you performed, then press LOG.${e&&e.assist?"<br><span class='muted'>Assisted: enter assist as a negative number.</span>":""}</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
   const s=S.session.entries[id].sets[i]; s.w=w; s.r=r; s.done=true; s.skipped=false; s.at=new Date().toISOString(); save(); vWorkout();
@@ -1091,12 +1133,10 @@ function adjR(id,i,d){ const s=S.session.entries[id].sets[i]; s.r=Math.max(0,Mat
 function editW(id,i){
   const e=exDef(id); if(e&&e.bw) return;
   const s=S.session.entries[id].sets[i];
-  const v=prompt("Weight for this set (lb, negative = assist):", s.w);
-  if(v===null) return; const w=parseFloat(v);
-  if(isFinite(w)){
+  askWeight(s.w, function(w){
     if(s.plannedW==null) s.plannedW=s.w;
     s.w=w; s.at=new Date().toISOString(); save(); vWorkout();
-  }
+  });
 }
 let rpeCb=null;
 function askRPE(cb){
@@ -1522,7 +1562,7 @@ function vWeight(){
     <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>BODY WEIGHT</div>
       <div class="pbody">
         <div class="wrow">
-          <input class="cin" style="flex:1;width:auto" type="number" inputmode="decimal" step="0.1" id="win" placeholder="Today's weight (lb)">
+          <input class="cin" style="flex:1;width:auto" type="text" inputmode="decimal" autocomplete="off" id="win" placeholder="Today's weight (lb)">
           <button class="logbtn" style="margin:0;padding:11px 16px" onclick="addWeight()">LOG</button>
         </div>
         <div style="margin-top:12px">${chart}</div>
@@ -1554,7 +1594,7 @@ function endFast(){
     <button class="btn" onclick="closeModal();vWeight()">COMPLETE</button>`);
 }
 function addWeight(){
-  const v=parseFloat(document.getElementById("win").value);
+  const v=parseNum(document.getElementById("win").value);
   if(!(v>0)) return;
   const t=todayStr();
   const existing=S.weights.find(w=>w.d===t);
