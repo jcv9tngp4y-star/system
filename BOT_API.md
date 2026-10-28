@@ -384,14 +384,14 @@ Do not deploy these rules from the app repo until they have been reviewed. `fire
 
 Project: `the-system-ac6d5`. Web config already in the app: api key, auth domain `the-system-ac6d5.firebaseapp.com`, project id. No extra app id is required for Auth and Firestore.
 
-1. **Authentication → Sign-in method**: enable **Google** and **Email/Password**.
+1. **Authentication → Sign-in method**: enable **Email/Password**. That is the only sign-in method the app offers.
 2. **Authentication → Settings → Authorized domains**: add `jcv9tngp4y-star.github.io`. (`localhost` is already there for emulator and local preview.)
 3. **Build → Firestore**: create the database if it is not already the one the leaderboard uses. Deploy `firestore.rules` after review.
 4. **Project settings → Service accounts → Generate new private key** for the bot. Role that can use the Admin SDK (Firebase Admin / Cloud Datastore User). Store the JSON outside the repo. The Admin SDK bypasses security rules, which is how the bot creates `plans/{date}`.
 5. Each athlete signs in once on their own phone and reads the UID off the SYSTEM tab (or the bot lists `users` with the Admin SDK and reads `profile`).
 6. Optional: delete legacy `leaderboard/{randomId}` documents after people have signed in, so the guild doesn't show duplicates.
 
-Google sign-in uses a popup, and falls back to a redirect if the popup is blocked. Email/password is on the same screen.
+Sign-in and new accounts are email and password, on the SYSTEM screen.
 
 ## Checking it
 
@@ -414,7 +414,7 @@ Signed-in phone, against the emulator:
 
 1. `npx firebase-tools emulators:start --only auth,firestore`
 2. Open `http://127.0.0.1:8088/index.html?emulator=1` (any static server).
-3. SYSTEM → create an email account (the Auth emulator accepts it; Google popup does not hit the emulator).
+3. SYSTEM → create an email account (the Auth emulator accepts it).
 4. Confirm the upload if this browser already has a log.
 5. In the emulator UI or a script, write `users/{uid}/plans/{today}` using the schema above.
 6. Quest should show the plan offline after one online load (toggle offline in devtools and reload).

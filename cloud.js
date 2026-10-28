@@ -50,7 +50,6 @@ const Cloud=(function(){
   }
   function friendly(err){
     const code=err && err.code || "";
-    if(code==="auth/popup-closed-by-user") return "Sign-in window closed.";
     if(code==="auth/invalid-email") return "That email doesn't look right.";
     if(code==="auth/wrong-password" || code==="auth/invalid-credential") return "Email or password didn't match.";
     if(code==="auth/email-already-in-use") return "That email already has an account. Sign in instead.";
@@ -624,9 +623,6 @@ const Cloud=(function(){
       }
       return db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
     }).then(()=>{
-      auth.getRedirectResult().then(res=>{
-        if(res && res.user) errMsg="";
-      }).catch(err=>{ errMsg=friendly(err); });
       auth.onAuthStateChanged(u=>{
         authReady=true;
         if(!u){
@@ -654,19 +650,6 @@ const Cloud=(function(){
     }, 5000);
   }
 
-  function signInGoogle(){
-    errMsg="";
-    if(!auth){ errMsg="Sign-in isn't available offline."; notify(); return; }
-    const provider=new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err=>{
-      const code=err && err.code;
-      if(code==="auth/popup-blocked" || code==="auth/operation-not-supported-in-this-environment" || code==="auth/cancelled-popup-request"){
-        auth.signInWithRedirect(provider).catch(e2=>{ errMsg=friendly(e2); notify(); });
-        return;
-      }
-      errMsg=friendly(err); notify();
-    });
-  }
   function emailFromForm(){
     const e=document.getElementById("emIn"), p=document.getElementById("pwIn");
     return {email:(e&&e.value||"").trim(), pass:p&&p.value||""};
@@ -711,11 +694,10 @@ const Cloud=(function(){
       lines.push(`<div class="muted" style="font-size:11px;line-height:1.6">Your coach writes today's plan to this UID. Training still lives on this device if the network drops. Signing out stops sync — it does not erase the log on this phone.</div>`);
       lines.push(`<button class="btn ghost" onclick="Cloud.signOut()">SIGN OUT</button>`);
     } else {
-      lines.push(`<div class="muted" style="font-size:11px;line-height:1.6">Optional. Signed out, everything stays on this device exactly as before. Sign in to sync across phones and to receive a daily plan from your coach.</div>`);
-      lines.push(`<button class="btn" onclick="Cloud.signInGoogle()">SIGN IN WITH GOOGLE</button>`);
+      lines.push(`<div class="muted" style="font-size:11px;line-height:1.6">Optional. Signed out, everything stays on this device exactly as before. Sign in with email to sync across phones and to receive a daily plan from your coach.</div>`);
       lines.push(`<input class="cin" id="emIn" type="email" autocomplete="username" placeholder="email" style="width:100%;margin-top:10px">`);
       lines.push(`<input class="cin" id="pwIn" type="password" autocomplete="current-password" placeholder="password" style="width:100%;margin-top:8px">`);
-      lines.push(`<button class="btn ghost" onclick="Cloud.emailSignIn()">SIGN IN WITH EMAIL</button>`);
+      lines.push(`<button class="btn" onclick="Cloud.emailSignIn()">SIGN IN WITH EMAIL</button>`);
       lines.push(`<button class="btn ghost" onclick="Cloud.emailCreate()">CREATE ACCOUNT</button>`);
       if(status==="local") lines.push(`<div class="muted" style="font-size:10px">Cloud library didn't load — still fully usable offline.</div>`);
     }
@@ -724,7 +706,7 @@ const Cloud=(function(){
 
   return {
     start, onSave, pausePush, catchUp, writeSession, writeJournalEntry, markPlanStatus, pushLeaderboard,
-    signInGoogle, emailSignIn, emailCreate, signOut, useLiveCloud, accountSection,
+    emailSignIn, emailCreate, signOut, useLiveCloud, accountSection,
     uid, signedIn, authSettled, planResolved, todayPlan, blockedMessage, statusText, emulatorOn,
     intakeContext, saveIntakeDraft, submitIntake, dismissIntake, awaitingPlan, upcomingDays,
     set onChange(fn){ handler=fn; },
