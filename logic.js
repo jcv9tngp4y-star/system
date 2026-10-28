@@ -588,86 +588,120 @@ function previewSide(s){
   if(typeof s.per==="string" && previewText(s.per)) return previewText(s.per);
   return "";
 }
-function previewSetLine(s){
-  if(!s || typeof s!=="object") return "";
-  const reps=previewRepText(s);
-  const bits=[previewWeightText(s.weight)+(reps?" × "+reps:"")];
-  if(previewText(s.note)) bits.push(previewText(s.note));
-  const side=previewSide(s);
-  if(side) bits.push(side);
-  return bits.join(" · ");
+function isWarmupSet(s){
+  if(!s || typeof s!=="object") return false;
+  if(s.warmup || s.warmUp || s.wu || s.isWarmup) return true;
+  const kind=previewText(s.kind||s.role||s.tag).toLowerCase();
+  if(kind==="warmup" || kind==="warm-up" || kind==="warm up") return true;
+  return /warm[\s-]?up/i.test(previewText(s.note));
 }
-function previewStretchLine(it){
-  if(!it || typeof it!=="object") return "";
-  const sets=it.sets!=null ? it.sets : (it.holds!=null ? it.holds : 1);
-  const repsMode=it.mode==="reps" || (it.reps!=null && it.sec==null);
-  const dose=repsMode
-    ? sets+"×"+(it.reps!=null?it.reps:0)+" reps"
-    : sets+"×"+(it.sec!=null?it.sec:0)+"s";
-  const bits=[previewText(it.name)||previewText(it.exerciseId)||"Stretch", dose];
-  const side=previewSide(it);
-  if(side) bits.push(side);
-  if(previewText(it.note)) bits.push(previewText(it.note));
-  return bits.join(" · ");
+/* Work sets that share a weight, rep range, and side collapse to
+   "2 × 8 @ 95 lb". Warm-up sets stay out of that count. */
+function compactLiftValue(sets){
+  const list=(Array.isArray(sets)?sets:[]).filter(s=>s && typeof s==="object");
+  const warm=list.filter(isWarmupSet);
+  const work=list.filter(s=>!isWarmupSet(s));
+  const use=work.length ? work : list;
+  const groups=[];
+  for(let i=0;i<use.length;i++){
+    const s=use[i];
+    const reps=previewRepText(s);
+    const weight=previewWeightText(s.weight);
+    const side=previewSide(s);
+    const key=reps+"|"+weight+"|"+side;
+    const last=groups[groups.length-1];
+    if(last && last.key===key) last.n++;
+    else groups.push({key:key, n:1, reps:reps, weight:weight, side:side});
+  }
+  const main=groups.map(g=>{
+    const dose=g.reps ? g.n+" × "+g.reps+" @ "+g.weight : g.n+" @ "+g.weight;
+    return g.side ? dose+" · "+g.side : dose;
+  }).join(" · ");
+  if(!work.length || !warm.length) return main || "—";
+  const weights=[];
+  for(let i=0;i<warm.length;i++){
+    const w=previewWeightText(warm[i].weight);
+    if(weights.indexOf(w)<0) weights.push(w);
+  }
+  return main+" · warm-up "+weights.join(", ");
 }
-function previewSwaps(b){
-  return (Array.isArray(b && b.swaps) ? b.swaps : []).map(sw=>{
-    if(!sw) return "";
-    const name=previewText(sw.name)||previewText(sw.exerciseId);
-    const note=previewText(sw.note);
-    if(!name) return "";
-    return note ? name+" ("+note+")" : name;
-  }).filter(Boolean);
+function stretchMoveCount(b){
+  if(Array.isArray(b.items)) return b.items.filter(it=>it && typeof it==="object").length;
+  if(previewText(b.name) || previewText(b.exerciseId) || previewText(b.title)) return 1;
+  return 0;
 }
-/* Read-only view of a plan document. This does not use the runnable-plan
-   filter, so a warm-up note, an optional drill, or a stretch without an id
-   still shows. Null only when there is no document. */
-function previewBlock(b){
+function movesLabel(n){
+  return n+" "+(n===1 ? "move" : "moves");
+}
+/* A short activity word ("easy bike") belongs in the row label.
+   A sentence stays off the row — plan notes get one muted line instead. */
+function activityPhrase(note){
+  const t=previewText(note);
+  if(!t || t.length>28 || /[.!?]/.test(t)) return "";
+  return t;
+}
+function previewMinutes(b){
+  if(b.minutes!=null && b.minutes!=="") return b.minutes;
+  if(b.min!=null && b.min!=="") return b.min;
+  return 0;
+}
+function previewDuration(seconds){
+  const n=Number(seconds);
+  if(!isFinite(n) || n<=0) return "";
+  if(n%60===0) return (n/60)+" min";
+  if(n>60) return Math.floor(n/60)+" min "+(n%60)+"s";
+  return n+"s";
+}
+function previewNoteLine(notes){
+  const t=previewText(notes).replace(/\s+/g," ");
+  if(t.length<=90) return t;
+  const cut=t.slice(0,87);
+  const sp=cut.lastIndexOf(" ");
+  return (sp>40 ? cut.slice(0,sp) : cut).replace(/[.,;:\s]+$/,"")+"…";
+}
+/* One compact row per block. Lifts keep work-set weight, reps, and
+   per-arm / per-side. Stretch blocks collapse to a move count. */
+function previewRow(b){
   if(!b || typeof b!=="object") return null;
   const type=b.type==="prehab" ? "stretch" : (b.type||"block");
-  const note=previewText(b.note)||previewText(b.notes);
   const optional=!!b.optional;
-  const swaps=previewSwaps(b);
   if(type==="lift"){
     return {
-      type, name:previewText(b.name)||previewText(b.exerciseId)||"Lift",
-      lines:(Array.isArray(b.sets)?b.sets:[]).map(previewSetLine).filter(Boolean),
-      note, optional, swaps
+      name:previewText(b.name)||previewText(b.exerciseId)||"Lift",
+      value:compactLiftValue(b.sets)
     };
   }
   if(type==="stretch"){
-    const items=Array.isArray(b.items) && b.items.length ? b.items : [b];
+    const n=stretchMoveCount(b);
     return {
-      type, name:previewText(b.title)||previewText(b.name)||"Prehab",
-      lines:items.map(previewStretchLine).filter(Boolean),
-      note, optional, swaps
+      name:previewText(b.title)||previewText(b.name)||"Prehab",
+      value:movesLabel(n)+(optional?" · optional":"")
     };
   }
   if(type==="cardio"){
-    const mins=b.minutes!=null ? b.minutes : (b.min!=null ? b.min : 0);
-    return {type, name:previewText(b.name)||"Cardio", lines:[String(mins)+" min"], note, optional, swaps};
+    const name=previewText(b.name)||"Cardio";
+    const act=activityPhrase(b.note);
+    return {name:act ? name+": "+act : name, value:previewMinutes(b)+" min"};
   }
   if(type==="skill"){
     const timed=b.mode==="timed" || (b.seconds!=null && b.mode!=="made");
-    const goal=timed
-      ? (b.seconds!=null ? b.seconds+"s" : "timed")
+    let value=timed
+      ? (previewDuration(b.seconds)||"timed")
       : (b.targetMakes!=null ? b.targetMakes+" makes" : "makes");
-    const mode=b.mode || (timed ? "timed" : "made");
-    return {type, name:previewText(b.name)||"Skill", lines:[mode+" · "+goal], note, optional, swaps};
+    if(optional) value+=" · optional";
+    return {name:previewText(b.name)||previewText(b.exerciseId)||"Skill", value:value};
   }
-  return {
-    type, name:previewText(b.name)||previewText(b.title)||type,
-    lines:note ? [note] : [],
-    note:"", optional, swaps
-  };
+  const name=previewText(b.name)||previewText(b.title)||type;
+  const act=activityPhrase(b.note);
+  return {name:name, value:act||(optional?"optional":"—")};
 }
 function planPreview(raw){
   if(!raw || typeof raw!=="object") return null;
-  const blocks=(Array.isArray(raw.blocks)?raw.blocks:[]).map(previewBlock).filter(Boolean);
+  const rows=(Array.isArray(raw.blocks)?raw.blocks:[]).map(previewRow).filter(Boolean);
   return {
     title:friendlyWorkoutName(previewText(raw.title))||previewText(raw.title)||"Coach plan",
-    notes:previewText(raw.notes),
-    blocks
+    notes:previewNoteLine(raw.notes),
+    rows:rows
   };
 }
 
