@@ -595,10 +595,12 @@ const Cloud=(function(){
       const pain=doc.pain||{};
       const painOn=!!(pain.shoulder||pain.knee||pain.back||pain.elbow||(pain.other&&String(pain.other).trim()));
       const swaps=doc.swapRequests||[];
-      if((doc.notes && String(doc.notes).trim()) || painOn || swaps.length){
+      const text=typeof Logic!=="undefined" && Logic.notesPlain ? Logic.notesPlain(doc.notes) : (typeof doc.notes==="string"?doc.notes:"");
+      const answers=doc.notes && typeof doc.notes==="object" ? doc.notes : null;
+      if(text || painOn || swaps.length){
         await userRef().collection("notes").doc(doc.id).set({
-          date:doc.date||null, sessionId:doc.id, text:doc.notes||"",
-          pain:pain, swapRequests:swaps, createdAt:doc.finishedAt||new Date().toISOString()
+          date:doc.date||null, sessionId:doc.id, text:text,
+          answers:answers, pain:pain, swapRequests:swaps, createdAt:doc.finishedAt||new Date().toISOString()
         });
       }
       const top=S.log && S.log[0];

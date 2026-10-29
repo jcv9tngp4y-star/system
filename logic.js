@@ -171,7 +171,10 @@ function normalizePlan(raw){
     if(!b || typeof b!=="object") continue;
     let type=b.type;
     if(type==="prehab") type="stretch";
-    if(type!=="lift" && type!=="stretch" && type!=="cardio" && type!=="skill") continue;
+    /* A stretch block titled exactly "Core" is core work. New plans should
+       send type "core"; older Core blocks still run, just not as stretches. */
+    if(type==="stretch" && /^core$/i.test(String(b.title||b.name||"").trim())) type="core";
+    if(type!=="lift" && type!=="stretch" && type!=="core" && type!=="cardio" && type!=="skill") continue;
     const block=Object.assign({}, b, {type});
     if(type==="lift"){
       if(!block.exerciseId || !Array.isArray(block.sets) || !block.sets.length) continue;
@@ -186,7 +189,7 @@ function normalizePlan(raw){
         };
       });
       block.swaps=Array.isArray(block.swaps) ? block.swaps.filter(sw=>sw && sw.exerciseId) : [];
-    } else if(type==="stretch"){
+    } else if(type==="stretch" || type==="core"){
       let items=Array.isArray(block.items) ? block.items.slice() : null;
       if(!items || !items.length){
         if(!block.exerciseId) continue;
@@ -207,7 +210,7 @@ function normalizePlan(raw){
         reps: it.reps!=null ? Number(it.reps) : null,
         perSide: !!it.perSide,
         note: it.note||""
-      })).filter(it=>it.exerciseId);
+      })).filter(it=>it.exerciseId || it.name);
       if(!block.items.length) continue;
     } else if(type==="cardio"){
       block.minutes = Number(block.minutes||block.min||0);
@@ -261,8 +264,8 @@ function buildPlanSession(plan, nowIso){
           done:false, skipped:false, at:null
         };
       });
-    } else if(b.type==="stretch"){
-      block.title=b.title||b.name||"PREHAB";
+    } else if(b.type==="stretch" || b.type==="core"){
+      block.title=b.title||b.name||(b.type==="core"?"CORE":"PREHAB");
       block.items=(b.items||[]).map(it=>({
         exerciseId:it.exerciseId, name:it.name||"", mode:it.mode, sets:it.sets,
         sec:it.sec, reps:it.reps, perSide:!!it.perSide, note:it.note||"",
@@ -625,10 +628,41 @@ function compactLiftValue(sets){
   }
   return main+" · warm-up "+weights.join(", ");
 }
+function stretchItems(b){
+  if(Array.isArray(b.items) && b.items.length) return b.items.filter(it=>it && typeof it==="object");
+  if(b && (previewText(b.name) || previewText(b.exerciseId) || b.sec!=null || b.reps!=null || b.perSide)) return [b];
+  return [];
+}
 function stretchMoveCount(b){
-  if(Array.isArray(b.items)) return b.items.filter(it=>it && typeof it==="object").length;
-  if(previewText(b.name) || previewText(b.exerciseId) || previewText(b.title)) return 1;
+  const items=stretchItems(b);
+  if(items.length) return items.length;
+  if(previewText(b && b.title)) return 1;
   return 0;
+}
+/* perSide means every set is done on each side, not "set 1 is the left leg". */
+function itemIsPerSide(it){
+  if(!it) return false;
+  if(it.perSide) return true;
+  const per=previewText(it.per).toLowerCase();
+  return per==="side" || per==="per side" || per==="each side";
+}
+function itemRepsMode(it){
+  return it.mode==="reps" || (it.reps!=null && it.mode!=="hold" && it.sec==null);
+}
+function setSideLabel(it){
+  if(!it) return "";
+  const per=itemIsPerSide(it);
+  if(itemRepsMode(it)){
+    const n=it.reps!=null ? it.reps : 0;
+    return per ? n+" / side" : n+" reps";
+  }
+  const n=it.sec!=null ? it.sec : 0;
+  return per ? n+"s / side" : n+"s";
+}
+function itemSideDose(it){
+  if(!it) return "";
+  const sets=Math.max(1, Number(it.sets!=null ? it.sets : it.holds)||1);
+  return sets+" × "+setSideLabel(it);
 }
 function movesLabel(n){
   return n+" "+(n===1 ? "move" : "moves");
@@ -671,12 +705,13 @@ function previewRow(b){
       value:compactLiftValue(b.sets)
     };
   }
-  if(type==="stretch"){
-    const n=stretchMoveCount(b);
-    return {
-      name:previewText(b.title)||previewText(b.name)||"Prehab",
-      value:movesLabel(n)+(optional?" · optional":"")
-    };
+  if(type==="stretch" || type==="core"){
+    const items=stretchItems(b);
+    const name=previewText(b.title)||previewText(b.name)||(type==="core"?"Core":"Prehab");
+    const value=items.length===1
+      ? itemSideDose(items[0])+(optional?" · optional":"")
+      : movesLabel(items.length)+(optional?" · optional":"");
+    return {name:name, value:value};
   }
   if(type==="cardio"){
     const name=previewText(b.name)||"Cardio";
@@ -695,6 +730,182 @@ function previewRow(b){
   const act=activityPhrase(b.note);
   return {name:name, value:act||(optional?"optional":"—")};
 }
+/* Later unfinished sets that still carry the edited set's old weight follow it.
+   Completed sets stay as logged. Sets before the edit stay put. */
+function sameLoad(a, b){
+  const x=Number(a), y=Number(b);
+  return isFinite(x) && isFinite(y) && x===y;
+}
+function cascadeWeight(sets, index, next){
+  if(!Array.isArray(sets) || !sets[index]) return 0;
+  const old=sets[index].w;
+  if(!sameLoad(old, old) || sameLoad(old, next)) {
+    if(sets[index] && !sameLoad(old, next) && isFinite(Number(next))) sets[index].w=next;
+    return 0;
+  }
+  let n=0;
+  for(let j=index+1; j<sets.length; j++){
+    const s=sets[j];
+    if(!s || s.done) continue;
+    if(sameLoad(s.w, old)){ s.w=next; n++; }
+  }
+  sets[index].w=next;
+  return n;
+}
+
+/* The menu always offers the plan's original exercise once you've left it. */
+function swapMenu(block){
+  if(!block) return [];
+  const cur=block.exerciseId;
+  const out=[];
+  const orig=block.original;
+  if(orig && orig.exerciseId && orig.exerciseId!==cur){
+    out.push({exerciseId:orig.exerciseId, name:orig.name||orig.exerciseId, note:"", revert:true});
+  }
+  const swaps=Array.isArray(block.swaps)?block.swaps:[];
+  for(let i=0;i<swaps.length;i++){
+    const sw=swaps[i];
+    if(!sw || !sw.exerciseId || sw.exerciseId===cur) continue;
+    if(out.some(x=>x.exerciseId===sw.exerciseId)) continue;
+    out.push({exerciseId:sw.exerciseId, name:sw.name||sw.exerciseId, note:sw.note||"", revert:false});
+  }
+  return out;
+}
+function applySwap(block, choice){
+  if(!block || !choice || !choice.exerciseId) return block;
+  if(!block.original) block.original={exerciseId:block.exerciseId, name:block.name||"", note:""};
+  block.exerciseId=choice.exerciseId;
+  block.name=choice.name||choice.exerciseId;
+  block.swappedFrom = block.original && block.exerciseId!==block.original.exerciseId
+    ? block.original.exerciseId : null;
+  const note=previewText(choice.note);
+  if(note && String(block.notes||"").indexOf(note)<0){
+    block.notes=((block.notes?block.notes+" ":"")+note).trim();
+  }
+  return block;
+}
+
+const COACH_QUESTIONS=[
+  "How did the workout feel overall?",
+  "Anything feel too easy or too heavy?",
+  "Any pain, tightness or discomfort? Where?",
+  "Did you change or swap anything?",
+  "Energy, sleep or food today?",
+  "Anything else for your coach?"
+];
+function coachNotes(answers){
+  const notes={};
+  const list=Array.isArray(answers)?answers:[];
+  for(let i=0;i<COACH_QUESTIONS.length;i++){
+    const raw=list[i]==null?"":list[i];
+    notes[COACH_QUESTIONS[i]]=String(raw).replace(/\s+/g," ").trim();
+  }
+  return notes;
+}
+function notesPlain(notes){
+  if(notes==null) return "";
+  if(typeof notes==="string") return notes.trim();
+  if(typeof notes!=="object") return "";
+  const lines=[];
+  const keys=Object.keys(notes);
+  for(let i=0;i<keys.length;i++){
+    const a=String(notes[keys[i]]==null?"":notes[keys[i]]).trim();
+    if(a) lines.push(keys[i]+" "+a);
+  }
+  return lines.join("\n");
+}
+
+function normQuestId(id){
+  return String(id||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+}
+/* Ids the bot should use so workout reps land on the daily quest.
+   A matching display name counts too, so a new id still works. */
+function questKind(exerciseId, name){
+  const id=normQuestId(exerciseId);
+  const nm=String(name||"").toLowerCase();
+  const has=list=>list.indexOf(id)>=0;
+  if(has(["plank","frontplank","forearmplank"]) || /\bplank\b/.test(nm)) return "plank";
+  if(has(["pushup","pushups","pu","kneepush","kneepu","kneepushup","inclinepu","inclinepushup","jpush","awpu","wallpu","wallpushup","wallpushups"]) || /push-?\s?ups?/.test(nm)) return "push";
+  if(has(["situp","situps","crunch","crunches"]) || /sit-?\s?ups?|\bcrunches?\b/.test(nm)) return "sit";
+  if(has(["bridge","glutebridge","gbridge","hipbridge"]) || /glute bridges?|hip bridges?/.test(nm)) return "bridge";
+  if(has(["sitstand","sittostand","sts"]) || /sit-?\s?to-?\s?stands?/.test(nm)) return "sts";
+  if(has(["bwsquat","airsquat","bw-squat","bodyweightsquat","squatbw"]) || /bodyweight squats?|air squats?/.test(nm)) return "squat";
+  if(has(["run","jog","treadmill","outdoorrun","easyrun"]) || (/\brun(?:ning)?\b|\bjog(?:ging)?\b/.test(nm) && !/\bbike\b|\brow\b/.test(nm))) return "run";
+  if(has(["walk","briskwalk"]) || (/\bwalk(?:ing)?\b/.test(nm) && !/\bfarmer\b/.test(nm))) return "walk";
+  return "";
+}
+function repSlot(profile, kind){
+  const reps=profile && Array.isArray(profile.reps) ? profile.reps : [];
+  const re = kind==="push" ? /push/i
+    : kind==="sit" ? /sit-?\s?up|crunch/i
+    : kind==="squat" ? /squat/i
+    : kind==="bridge" ? /bridge/i
+    : kind==="sts" ? /sit-?\s?to-?\s?stand/i
+    : null;
+  if(!re) return -1;
+  for(let i=0;i<reps.length;i++) if(re.test(String(reps[i]||""))) return i;
+  return -1;
+}
+function timedSlot(profile, kind){
+  const reps=profile && Array.isArray(profile.reps) ? profile.reps.length : 0;
+  const timed=profile && Array.isArray(profile.timed) ? profile.timed : [];
+  for(let i=0;i<timed.length;i++){
+    const name=String(timed[i] && timed[i].n || "").toLowerCase();
+    const k=timed[i] && timed[i].kind || "";
+    if(kind==="plank" && (k==="plank" || /plank/.test(name))) return reps+i;
+    if(kind==="run" && /run|jog/.test(name)) return reps+i;
+    if(kind==="walk" && /walk/.test(name)) return reps+i;
+  }
+  return -1;
+}
+function pushCredit(merged, profile, kind, amount, unit){
+  if(!(amount>0)) return;
+  const idx=unit==="min" ? timedSlot(profile, kind) : repSlot(profile, kind);
+  if(idx<0) return;
+  merged[idx]=(merged[idx]||0)+amount;
+}
+/* Reps and running minutes from a logged plan, keyed to this profile's quest. */
+function questCredits(profile, blocks){
+  const merged={};
+  const list=Array.isArray(blocks)?blocks:[];
+  for(let i=0;i<list.length;i++){
+    const b=list[i];
+    if(!b) continue;
+    if(b.type==="lift"){
+      const kind=questKind(b.exerciseId, b.name);
+      if(!kind || kind==="run" || kind==="walk" || kind==="plank") continue;
+      let reps=0;
+      const sets=Array.isArray(b.sets)?b.sets:[];
+      for(let s=0;s<sets.length;s++) if(sets[s] && sets[s].done) reps+=Number(sets[s].r)||0;
+      pushCredit(merged, profile, kind, reps, "reps");
+    } else if(b.type==="stretch" || b.type==="core"){
+      const items=Array.isArray(b.items)?b.items:[];
+      for(let j=0;j<items.length;j++){
+        const it=items[j];
+        if(!it) continue;
+        const kind=questKind(it.exerciseId, it.name);
+        if(!kind) continue;
+        const checks=Array.isArray(it.checks)?it.checks:[];
+        const done=checks.filter(Boolean).length;
+        if(!done) continue;
+        if(itemRepsMode(it) && kind!=="plank" && kind!=="run" && kind!=="walk"){
+          const each=(Number(it.reps)||0)*(itemIsPerSide(it)?2:1);
+          pushCredit(merged, profile, kind, done*each, "reps");
+        } else if(kind==="plank"){
+          const sec=done*(Number(it.sec)||0);
+          pushCredit(merged, profile, "plank", Math.round(sec/60), "min");
+        }
+      }
+    } else if(b.type==="cardio" && b.done && !b.skipped){
+      const kind=questKind(b.exerciseId, b.name);
+      if(kind!=="run" && kind!=="walk") continue;
+      const mins=Number(b.actualMin!=null ? b.actualMin : b.minutes)||0;
+      pushCredit(merged, profile, kind, mins, "min");
+    }
+  }
+  return Object.keys(merged).map(k=>({index:Number(k), amount:merged[k]}));
+}
+
 function planPreview(raw){
   if(!raw || typeof raw!=="object") return null;
   const rows=(Array.isArray(raw.blocks)?raw.blocks:[]).map(previewRow).filter(Boolean);
@@ -711,6 +922,7 @@ const Logic={
   representativeWeight, progressExercise, setsRecord, normalizePlan, buildPlanSession,
   addIsoDays, friendlyWorkoutName, weekAhead, monthDay,
   QUEST_START, questCurve, settleQuest, recordQuestClear, nudgeQuest, restartQuest, questStatus,
-  planPreview
+  planPreview, setSideLabel, itemSideDose, cascadeWeight, swapMenu, applySwap,
+  COACH_QUESTIONS, coachNotes, notesPlain, questKind, questCredits
 };
 if(typeof module!=="undefined" && module.exports) module.exports=Logic;

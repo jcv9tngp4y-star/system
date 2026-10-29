@@ -455,6 +455,40 @@ function creditTimed(kind,m){
   S.daily.parts[i]=Math.min(g[i], S.daily.parts[i]+m); save();
 }
 function creditRun(m){ creditTimed("run",m); }
+function applyQuestCredits(list){
+  const out={lines:[], cleared:false, detail:""};
+  if(!S.daily || S.daily.enabled===false || S.daily.lastComplete===todayStr()) return out;
+  const t=todayStr();
+  const goals=dailyGoals();
+  if(!Array.isArray(S.daily.parts) || S.daily.todayD!==t){
+    S.daily.todayD=t;
+    S.daily.parts=goals.map(()=>0);
+  }
+  while(S.daily.parts.length<goals.length) S.daily.parts.push(0);
+  const items=dqItems();
+  for(const c of list||[]){
+    if(!c || c.index<0 || c.index>=goals.length || !(Number(c.amount)>0)) continue;
+    const before=S.daily.parts[c.index]||0;
+    S.daily.parts[c.index]=Math.min(goals[c.index], before+Number(c.amount));
+    const got=S.daily.parts[c.index]-before;
+    if(got>0){
+      const unit=items[c.index] && items[c.index].unit==="min" ? " min" : "";
+      out.lines.push((items[c.index]?items[c.index].n:"Quest")+": +"+got+unit);
+    }
+  }
+  if(!out.lines.length) return out;
+  save();
+  if(S.daily.parts.every((v,j)=>v>=goals[j])){
+    out.cleared=true;
+    out.detail=completeDaily({silent:true})||"";
+  }
+  return out;
+}
+function questCreditHtml(credited){
+  if(!credited || !credited.lines || !credited.lines.length) return "";
+  const head=credited.cleared ? "Daily quest cleared" : "Counted toward today's quest";
+  return `<div class="muted" style="margin-top:8px">${head}<br>${credited.lines.map(esc).join("<br>")}</div>${credited.detail||""}`;
+}
 function addDaily(i,n){
   if(S.daily.lastComplete===todayStr()) return;
   const goals=dailyGoals();
@@ -463,7 +497,7 @@ function addDaily(i,n){
   if(S.daily.parts.every((v,j)=>v>=goals[j])) completeDaily();
   else vQuest();
 }
-function completeDaily(){
+function completeDaily(opts){
   const goals=dailyGoals();
   if(!S.daily.parts.every((v,j)=>v>=goals[j])) return;
   const t=todayStr(), items=dqItems(), p=prof();
@@ -487,11 +521,14 @@ function completeDaily(){
   S.log.unshift(dailyEntry);
   if(window.Cloud && Cloud.writeJournalEntry) Cloud.writeJournalEntry(dailyEntry);
   gainXp(xp); save(); pushLB();
-  modal(`<h2>⚠ DAILY QUEST CLEAR</h2>
-    <div class="big">+${xp} XP</div>
-    ${streakMsg}
-    <button class="btn" onclick="finishClear()">COMPLETE</button>`);
+  if(!(opts && opts.silent)){
+    modal(`<h2>⚠ DAILY QUEST CLEAR</h2>
+      <div class="big">+${xp} XP</div>
+      ${streakMsg}
+      <button class="btn" onclick="finishClear()">COMPLETE</button>`);
+  }
   renderHeader();
+  return streakMsg;
 }
 function startDailyTimed(i){
   const items=dqItems(), it=items[i];
@@ -1248,7 +1285,8 @@ function editW(id,i){
   const s=S.session.entries[id].sets[i];
   askWeight(s.w, function(w){
     if(s.plannedW==null) s.plannedW=s.w;
-    s.w=w; s.at=new Date().toISOString(); save(); vWorkout();
+    Logic.cascadeWeight(S.session.entries[id].sets, i, w);
+    s.at=new Date().toISOString(); save(); vWorkout();
   });
 }
 let rpeCb=null;
@@ -1291,16 +1329,15 @@ function finishQuest(){
   const title=sessTitle();
   const extra=`<div class="muted" style="text-align:left;font-size:12px;line-height:1.9">${progNotes.join("<br>")}</div>
      <div style="margin-top:10px">Volume moved: <b class="gold">${Math.round(ton).toLocaleString()} lb</b></div>`;
-  const names=lst.map(e=>({exerciseId:e.id, name:e.name}));
-  askRPE(function(r){
-    const label=["","easy","ok","brutal"][r];
-    sealSession(title, prof().workXP, det.join("\n")+" · RPE "+label, extra, {
-      source: bot?"bot":"fallback", kind:"lift", title, date:todayStr(),
-      planDate: S.session.planDate||null, deload: !!isDeload(),
-      startedAt: S.session.startedAt||null, effort:r, effortLabel:label,
-      exercises: structuredEx, blocks: structuredEx.map(x=>({type:"lift", exerciseId:x.exerciseId, sets:x.sets})),
-      tonnage: Math.round(ton)
-    }, names);
+  const credited=applyQuestCredits(Logic.questCredits(prof(), lst.map(e=>({
+    type:"lift", exerciseId:e.id, name:e.name, sets:S.session.entries[e.id].sets
+  }))));
+  sealSession(title, prof().workXP, det.join("\n"), extra+questCreditHtml(credited), {
+    source: bot?"bot":"fallback", kind:"lift", title, date:todayStr(),
+    planDate: S.session.planDate||null, deload: !!isDeload(),
+    startedAt: S.session.startedAt||null,
+    exercises: structuredEx, blocks: structuredEx.map(x=>({type:"lift", exerciseId:x.exerciseId, sets:x.sets})),
+    tonnage: Math.round(ton)
   });
 }
 
