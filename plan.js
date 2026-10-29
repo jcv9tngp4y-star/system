@@ -13,6 +13,174 @@ function blockDisplayName(b){
 }
 function planNow(){ return new Date().toISOString(); }
 
+/* In-workout countdown. Separate from the guided run/walk timer. */
+let CD=null;
+function cdClearInt(){ if(CD && CD.int){ clearInterval(CD.int); CD.int=null; } }
+function cdSpentNow(){
+  if(!CD) return 0;
+  return CD.running ? CD.segSpent+(Date.now()-CD.t0)/1000 : CD.segSpent;
+}
+function cdLeftNow(){
+  if(!CD) return 0;
+  const seg=CD.segments[CD.seg]||0;
+  return Math.max(0, Math.ceil(seg-cdSpentNow()));
+}
+function cdSideText(){
+  if(!CD) return "";
+  if(CD.segments.length<2) return CD.perSide ? (CD.segments[0]+"s / side") : "";
+  return "Side "+(CD.seg+1)+" · "+CD.segments[CD.seg]+"s / side";
+}
+function cdPaint(){
+  if(!CD) return false;
+  const t=document.getElementById("cdTime");
+  if(!t) return false;
+  CD.left=cdLeftNow();
+  t.textContent=typeof fmtT==="function" ? fmtT(CD.left) : String(CD.left);
+  const side=document.getElementById("cdSide");
+  if(side) side.textContent=cdSideText();
+  const fill=document.getElementById("cdFill");
+  if(fill){
+    const seg=CD.segments[CD.seg]||1;
+    const pct=Math.max(0, Math.min(100, Math.round((1-CD.left/seg)*100)));
+    fill.style.width=pct+"%";
+  }
+  return true;
+}
+function cdTick(){
+  if(!CD || !CD.running) return;
+  if(cdSpentNow()+0.05 < (CD.segments[CD.seg]||0)){
+    cdPaint();
+    return;
+  }
+  if(CD.seg+1<CD.segments.length){
+    CD.seg++;
+    CD.segSpent=0;
+    CD.t0=Date.now();
+    try{ if(typeof cue==="function") cue("run"); }catch(e){}
+    try{ if(navigator.vibrate) navigator.vibrate(80); }catch(e){}
+    cdPaint();
+    return;
+  }
+  cdFinish();
+}
+function cdArm(){
+  cdClearInt();
+  CD.int=setInterval(cdTick, 200);
+}
+function startCountdown(spec){
+  cdClearInt();
+  const segments=(spec.segments||[]).map(n=>Math.max(1, Math.round(Number(n)||0))).filter(n=>n>0);
+  if(!segments.length) return;
+  if(typeof initAudio==="function") initAudio();
+  if(typeof lockScreen==="function") lockScreen();
+  CD={
+    label:spec.label||"Timer",
+    segments:segments,
+    seg:0,
+    segSpent:0,
+    running:true,
+    t0:Date.now(),
+    perSide:!!spec.perSide,
+    onDone:spec.onDone||null,
+    int:null
+  };
+  CD.left=segments[0];
+  cdArm();
+  if(typeof vWorkout==="function") vWorkout();
+}
+function cdPause(){
+  if(!CD || !CD.running) return;
+  CD.segSpent=cdSpentNow();
+  CD.running=false;
+  CD.left=cdLeftNow();
+  cdClearInt();
+  if(typeof vWorkout==="function") vWorkout();
+}
+function cdResume(){
+  if(!CD || CD.running) return;
+  CD.running=true;
+  CD.t0=Date.now();
+  if(typeof lockScreen==="function") lockScreen();
+  cdArm();
+  if(typeof vWorkout==="function") vWorkout();
+}
+function cdReset(){
+  if(!CD) return;
+  CD.seg=0;
+  CD.segSpent=0;
+  CD.t0=Date.now();
+  CD.left=CD.segments[0];
+  if(!CD.running){ CD.running=true; if(typeof lockScreen==="function") lockScreen(); cdArm(); }
+  if(typeof vWorkout==="function") vWorkout();
+}
+function cdFinish(){
+  const done=CD && CD.onDone;
+  cdClearInt();
+  CD=null;
+  try{ if(typeof cue==="function") cue("done"); }catch(e){}
+  try{ if(navigator.vibrate) navigator.vibrate([180,80,180]); }catch(e){}
+  if(typeof unlockScreen==="function") unlockScreen();
+  if(done) done();
+  if(typeof vWorkout==="function" && S.session) vWorkout();
+}
+function countdownHtml(){
+  if(!CD) return "";
+  const seg=CD.segments[CD.seg]||1;
+  const left=cdLeftNow();
+  const pct=Math.max(0, Math.min(100, Math.round((1-left/seg)*100)));
+  const time=typeof fmtT==="function" ? fmtT(left) : String(left);
+  return `<div class="cdbox">
+    <div class="cdlab">${esc(CD.label)}</div>
+    <div class="cdside" id="cdSide">${esc(cdSideText())}</div>
+    <div class="cdtime" id="cdTime">${time}</div>
+    <div class="cdbar"><div class="cdfill" id="cdFill" style="width:${pct}%"></div></div>
+    <div class="cdbtns">
+      <button class="btn ghost" onclick="${CD.running?"cdPause()":"cdResume()"}">${CD.running?"PAUSE":"RESUME"}</button>
+      <button class="btn ghost" onclick="cdReset()">RESET</button>
+    </div>
+  </div>`;
+}
+function startHold(bi,ii,i){
+  const it=S.session.blocks[bi].items[ii];
+  const sec=Math.round(Number(it.sec)||0);
+  if(sec<=0) return;
+  const per=!!it.perSide;
+  startCountdown({
+    label:it.name||it.exerciseId||"Hold",
+    segments:per?[sec,sec]:[sec],
+    perSide:per,
+    onDone:function(){
+      it.checks[i]=true;
+      it.at=planNow();
+      save();
+    }
+  });
+}
+function startCardioCount(bi){
+  const b=S.session.blocks[bi];
+  const sec=Math.round(Number(b.minutes)*60);
+  if(sec<=0) return;
+  startCountdown({
+    label:b.name||"Cardio",
+    segments:[sec],
+    onDone:function(){
+      b.done=true; b.skipped=false; b.actualMin=Number(b.minutes)||0; b.at=planNow(); save();
+    }
+  });
+}
+function startSkillCount(bi){
+  const b=S.session.blocks[bi];
+  const sec=Math.round(Number(b.seconds)||0);
+  if(sec<=0) return;
+  startCountdown({
+    label:b.name||"Skill",
+    segments:[sec],
+    onDone:function(){
+      b.done=true; b.skipped=false; b.actualSec=sec; b.at=planNow(); save();
+    }
+  });
+}
+
 function planGateInner(plan){
   const bits=[];
   if(plan.notes) bits.push(`<div class="muted" style="text-align:center;font-size:11px;padding:4px 0 8px">${esc(plan.notes)}</div>`);
@@ -27,12 +195,13 @@ function planGateInner(plan){
       }).join("");
       const swaps=(b.swaps||[]).length?`<div class="muted" style="font-size:10px">Swap options: ${b.swaps.map(sw=>esc(sw.name||sw.exerciseId)).join(" · ")}</div>`:"";
       bits.push(`<div class="excard"><div class="exhead"><span class="exname">${esc(blockDisplayName(b))}</span><span class="extag">LIFT · ${b.sets.length} SETS</span></div>${b.notes?`<div class="muted" style="font-size:10px;margin-bottom:4px">${esc(b.notes)}</div>`:""}${sets}${swaps}</div>`);
-    } else if(b.type==="stretch"){
+    } else if(b.type==="stretch" || b.type==="core"){
       const items=(b.items||[]).map(it=>{
-        const dose=it.mode==="reps" ? `${it.sets}×${it.reps} reps` : `${it.sets}×${it.sec}s`;
-        return `<div class="goalrow"><span class="gname">${esc(it.name||it.exerciseId)}</span><span class="gval">${esc(dose)}${it.perSide?" · L/R":""}</span></div>`;
+        const dose=Logic.itemSideDose(it);
+        return `<div class="goalrow"><span class="gname">${esc(it.name||it.exerciseId)}</span><span class="gval">${esc(dose)}</span></div>`;
       }).join("");
-      bits.push(`<div class="excard"><div class="exhead"><span class="exname">${esc(b.title||"PREHAB")}</span><span class="extag">STRETCH</span></div>${items}</div>`);
+      const tag=b.type==="core"?"CORE":"STRETCH";
+      bits.push(`<div class="excard"><div class="exhead"><span class="exname">${esc(b.title||(b.type==="core"?"CORE":"PREHAB"))}</span><span class="extag">${tag}</span></div>${items}</div>`);
     } else if(b.type==="cardio"){
       bits.push(`<div class="goalrow"><span class="gname">${esc(b.name||"Cardio")}</span><span class="gval">${esc(b.minutes)} min</span></div>`);
     } else if(b.type==="skill"){
@@ -77,7 +246,7 @@ function vPlanSession(){
   if(!sess || sess.kind!=="plan"){ go("quest"); return; }
   const cards=sess.blocks.map((b,bi)=>{
     if(b.type==="lift") return planLiftCard(b, bi);
-    if(b.type==="stretch") return planStretchCard(b, bi);
+    if(b.type==="stretch" || b.type==="core") return planMoveCard(b, bi);
     if(b.type==="cardio") return planCardioCard(b, bi);
     if(b.type==="skill") return planSkillCard(b, bi);
     return "";
@@ -85,6 +254,7 @@ function vPlanSession(){
   document.getElementById("view").innerHTML=`
     <div class="panel"><div class="ptitle"><div class="diamond"><span>!</span></div>${esc(sess.title||"COACH PLAN")}</div>
       <div class="pbody">
+        ${countdownHtml()}
         ${sess.deload?`<div class="caltag">DELOAD — the app will record this session and leave your working weights alone</div>`:""}
         ${sess.notes?`<div class="muted" style="text-align:center;font-size:11px;margin-bottom:8px">${esc(sess.notes)}</div>`:""}
         <div class="caltag" style="color:var(--pb);border-color:rgba(var(--prgb),.5);display:block;text-align:center;margin-bottom:10px">COACH PLAN — log exactly what you did. Targets are a plan, not a cage.</div>
@@ -111,22 +281,26 @@ function planLiftCard(b, bi){
     </div>
     <div class="muted" style="font-size:10px;margin:-2px 0 4px 28px">target ${s.plannedW==null?"bodyweight":fw(s.plannedW)} × ${range}${s.restSec?` · rest ${s.restSec}s`:""}${s.note?" · "+esc(s.note):""}</div>`;
   }).join("");
-  const swaps=(b.swaps||[]).map((sw,si)=>`<button class="btn ghost" style="margin-top:6px;font-size:11px" onclick="planSwap(${bi},${si})">SWAP → ${esc(sw.name||sw.exerciseId)}</button>`).join("");
+  const swaps=Logic.swapMenu(b).map((sw,si)=>`<button class="btn ghost" style="margin-top:6px;font-size:11px" onclick="planSwap(${bi},${si})">${sw.revert?"SWAP BACK":"SWAP"} → ${esc(sw.name||sw.exerciseId)}</button>`).join("");
   return `<div class="excard">
     <div class="exhead"><span class="exname">${esc(blockDisplayName(b))}</span><span class="extag">${b.sets.length} SETS${b.swappedFrom?" · SWAPPED":""}</span></div>
     ${b.notes?`<div class="muted" style="font-size:10px;margin-bottom:4px">${esc(b.notes)}</div>`:""}
     ${rows}${swaps}</div>`;
 }
-function planStretchCard(b, bi){
+function planMoveCard(b, bi){
+  const tag=b.type==="core"?"CORE":"STRETCH";
   const items=(b.items||[]).map((it,ii)=>{
+    const dose=Logic.setSideLabel(it);
+    const hold=it.mode!=="reps" && Number(it.sec)>0;
     const rows=(it.checks||[]).map((done,i)=>`<div class="setrow ${done?"done":""}">
       <span class="setnum">${done?"✓":i+1}</span>
-      <span class="gname" style="flex:1;font-size:13px">${it.mode==="reps"?"Set":"Hold"} ${i+1} — ${it.mode==="reps"?(it.reps+" reps"):(it.sec+"s")}${it.perSide?(i%2===0?" · LEFT":" · RIGHT"):""}</span>
+      <span class="gname" style="flex:1;font-size:13px">${it.mode==="reps"?"Set":"Hold"} ${i+1} — ${esc(dose)}</span>
+      ${hold?`<button class="skipbtn" onclick="startHold(${bi},${ii},${i})">START</button>`:""}
       <button class="chk" onclick="planStretchTog(${bi},${ii},${i})">✓</button>
     </div>`).join("");
     return `<div class="exhead"><span class="exname">${esc(it.name||it.exerciseId)}</span></div>${it.note?`<div class="muted" style="font-size:10px">${esc(it.note)}</div>`:""}${rows}`;
   }).join("");
-  return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.title||"PREHAB")}</span><span class="extag">STRETCH</span></div>${items}</div>`;
+  return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.title||(b.type==="core"?"CORE":"PREHAB"))}</span><span class="extag">${tag}</span></div>${items}</div>`;
 }
 function planCardioCard(b, bi){
   return `<div class="excard">
@@ -138,7 +312,9 @@ function planCardioCard(b, bi){
       <span class="xmark">min</span>
       <button class="chk" onclick="planCardioTog(${bi})">✓</button>
       <button class="skipbtn" onclick="planCardioSkip(${bi})">${b.skipped?"UNDO":"SKIP"}</button>
-    </div></div>`;
+    </div>
+    ${Number(b.minutes)>0?`<button class="btn ghost" onclick="startCardioCount(${bi})">START ${esc(b.minutes)} MIN</button>`:""}
+    </div>`;
 }
 function planSkillCard(b, bi){
   const body=b.mode==="timed"
@@ -155,13 +331,16 @@ function planSkillCard(b, bi){
   return `<div class="excard"><div class="exhead"><span class="exname">${esc(b.name||"Skill")}</span><span class="extag">${b.mode==="timed"?"TIMED":"MADE / ATTEMPTED"}</span></div>
     ${b.note?`<div class="muted" style="font-size:10px;margin-bottom:4px">${esc(b.note)}</div>`:""}
     ${body}
+    ${b.mode==="timed" && Number(b.seconds)>0?`<button class="btn ghost" onclick="startSkillCount(${bi})">START TIMER</button>`:""}
     <button class="skipbtn" onclick="planSkillSkip(${bi})">${b.skipped?"UNDO SKIP":"SKIP DRILL"}</button></div>`;
 }
 
 function planEditW(bi,i){
-  const s=S.session.blocks[bi].sets[i];
+  const block=S.session.blocks[bi];
+  const s=block.sets[i];
   askWeight(s.w, function(w){
-    s.w=w; s.at=planNow(); save(); vWorkout();
+    Logic.cascadeWeight(block.sets, i, w);
+    s.at=planNow(); save(); vWorkout();
   });
 }
 function planAdj(bi,i,d){
@@ -183,12 +362,9 @@ function planSkip(bi,i){
 }
 function planSwap(bi,si){
   const b=S.session.blocks[bi];
-  const sw=b.swaps[si];
-  if(!sw) return;
-  if(!b.swappedFrom) b.swappedFrom=b.exerciseId;
-  b.exerciseId=sw.exerciseId;
-  b.name=sw.name||sw.exerciseId;
-  if(sw.note) b.notes=((b.notes?b.notes+" ":"")+sw.note).trim();
+  const menu=Logic.swapMenu(b);
+  if(!menu[si]) return;
+  Logic.applySwap(b, menu[si]);
   save(); vWorkout();
 }
 function planStretchTog(bi,ii,i){
@@ -232,7 +408,7 @@ function planSkillSkip(bi){
 function planAnythingDone(sess){
   for(const b of sess.blocks||[]){
     if(b.type==="lift" && (b.sets||[]).some(s=>s.done)) return true;
-    if(b.type==="stretch" && (b.items||[]).some(it=>(it.checks||[]).some(Boolean))) return true;
+    if((b.type==="stretch" || b.type==="core") && (b.items||[]).some(it=>(it.checks||[]).some(Boolean))) return true;
     if((b.type==="cardio" || b.type==="skill") && b.done) return true;
   }
   return false;
@@ -262,19 +438,19 @@ function planStructured(sess, notes){
           st.updatedAt=planNow();
         }
       }
-    } else if(b.type==="stretch"){
+    } else if(b.type==="stretch" || b.type==="core"){
       for(const it of b.items||[]){
         const checks=it.checks||[];
         const doneN=checks.filter(Boolean).length;
         const sets=checks.map((done,i)=>({
           index:i,
-          planned:{sec:it.mode==="hold"?it.sec:null, reps:it.mode==="reps"?it.reps:null},
+          planned:{sec:it.mode==="hold"?it.sec:null, reps:it.mode==="reps"?it.reps:null, perSide:!!it.perSide},
           actual:{done:!!done, skipped:!done},
           loggedAt:it.at||null
         }));
-        blocks.push({type:"stretch", exerciseId:it.exerciseId, planned:{sets:it.sets, mode:it.mode, sec:it.sec, reps:it.reps}, actual:{doneSets:doneN, done:doneN>0, skipped:doneN===0}, sets, loggedAt:it.at||null});
+        blocks.push({type:b.type, exerciseId:it.exerciseId, name:it.name||"", planned:{sets:it.sets, mode:it.mode, sec:it.sec, reps:it.reps, perSide:!!it.perSide}, actual:{doneSets:doneN, done:doneN>0, skipped:doneN===0}, sets, loggedAt:it.at||null});
         exercises.push({exerciseId:it.exerciseId, sets});
-        det.push((it.name||it.exerciseId)+": "+doneN+"/"+checks.length);
+        det.push((it.name||it.exerciseId)+": "+doneN+"/"+checks.length+(it.perSide?" / side":""));
       }
     } else if(b.type==="cardio"){
       blocks.push({type:"cardio", exerciseId:b.exerciseId||null, name:b.name||"", planned:{minutes:b.minutes}, actual:{minutes:Number(b.actualMin)||0, done:!!b.done, skipped:!!b.skipped || !b.done}, loggedAt:b.at||null});
@@ -293,7 +469,7 @@ function planStructured(sess, notes){
     doc:{
       source:"bot", kind:"plan", date:todayStr(), title:sess.title, planDate:sess.planDate||todayStr(),
       deload:!!sess.deload, startedAt:sess.startedAt||null, exercises, blocks, tonnage:Math.round(ton),
-      notes:(notes&&notes.notes)||"", pain:(notes&&notes.pain)||null, swapRequests:(notes&&notes.swapRequests)||[]
+      notes:(notes&&notes.notes)||"", pain:notes&&notes.pain?notes.pain:null, swapRequests:(notes&&notes.swapRequests)||[]
     },
     det:det.join("\n"),
     ton,
@@ -301,11 +477,11 @@ function planStructured(sess, notes){
   };
 }
 function planXp(sess){
-  const lift=sess.blocks.some(b=>b.type==="lift"||b.type==="cardio"||b.type==="skill");
+  const lift=sess.blocks.some(b=>b.type==="lift"||b.type==="cardio"||b.type==="skill"||b.type==="core");
   if(lift) return prof().workXP;
   let all=true, any=false;
   for(const b of sess.blocks){
-    if(b.type!=="stretch") continue;
+    if(b.type!=="stretch" && b.type!=="core") continue;
     for(const it of b.items||[]){
       const checks=it.checks||[];
       if(checks.some(Boolean)) any=true;
@@ -322,70 +498,46 @@ function finishPlan(){
     modal(`<h2>⚠ SYSTEM</h2><div>Nothing logged. Complete at least one set, stretch, or drill.</div><button class="btn" onclick="closeModal()">OK</button>`);
     return;
   }
-  const names=[];
-  for(const b of sess.blocks){
-    if(b.type==="lift") names.push({exerciseId:b.exerciseId, name:blockDisplayName(b)});
-    if(b.type==="stretch") for(const it of b.items||[]) names.push({exerciseId:it.exerciseId, name:it.name||it.exerciseId});
-    if(b.type==="skill" && b.exerciseId) names.push({exerciseId:b.exerciseId, name:b.name||b.exerciseId});
-  }
-  askRPE(function(r){
-    openNotes(names, function(extra){
-      const built=planStructured(sess, extra);
-      built.doc.effort=r;
-      built.doc.effortLabel=["","easy","ok","brutal"][r];
-      built.doc.finishedAt=planNow();
-      const label=built.doc.effortLabel;
-      S.tonnage+=built.ton;
-      S.quests++;
-      completeCommon(sess.title||"COACH PLAN", built.xp, built.det+(label?" · RPE "+label:""),
-        `<div class="muted">Logged for your coach. Working weights were not changed.</div>`, built.doc);
-    });
+  const credited=applyQuestCredits(Logic.questCredits(prof(), sess.blocks));
+  openNotes(function(extra){
+    const built=planStructured(sess, extra);
+    built.doc.finishedAt=planNow();
+    S.tonnage+=built.ton;
+    S.quests++;
+    const questNote=questCreditHtml(credited);
+    completeCommon(sess.title||"COACH PLAN", built.xp, built.det,
+      `<div class="muted">Logged for your coach. Working weights were not changed.</div>${questNote}`, built.doc);
   });
 }
 
-function openNotes(items, cb){
-  const painRow=(id,label)=>`<label class="chip"><input type="checkbox" id="${id}"> ${label}</label>`;
-  const swaps=(items||[]).filter(it=>it && it.exerciseId).map((it,i)=>
-    `<label class="goalrow" style="text-align:left;gap:8px"><input type="checkbox" id="sw-${i}" data-ex="${esc(it.exerciseId)}"><span class="gname">Swap ${esc(it.name||it.exerciseId)}</span></label>`
-  ).join("");
+function openNotes(cb){
   window._notesCb=cb;
-  window._notesItems=(items||[]).filter(it=>it && it.exerciseId);
+  const fields=Logic.COACH_QUESTIONS.map((q,i)=>`<div class="coachq">
+      <label for="cq${i}">${esc(q)}</label>
+      <input class="cin" id="cq${i}" type="text" autocomplete="off" placeholder="Optional">
+    </div>`).join("");
   modal(`<h2>⚠ NOTES</h2>
-    <div class="muted" style="font-size:11px">Optional. Pain and swap requests are how your coach changes the next plan.</div>
-    <div class="chipline">
-      ${painRow("pnSh","SHOULDER")}${painRow("pnKn","KNEE")}${painRow("pnBk","BACK")}${painRow("pnEl","ELBOW")}
-    </div>
-    <input class="cin" id="pnOt" placeholder="Other pain (optional)" style="width:100%;margin-top:8px">
-    ${swaps?`<div class="sect" style="text-align:left">ASK TO SWAP</div>${swaps}`:""}
-    <textarea class="io" id="pnNotes" placeholder="Anything else for your coach"></textarea>
-    <button class="btn" onclick="submitNotes(false)">SAVE NOTES</button>
-    <button class="btn ghost" onclick="submitNotes(true)">SKIP</button>`);
+    <div class="muted" style="font-size:11px">Optional. Leave any of these blank.</div>
+    ${fields}
+    <button class="btn" onclick="submitNotes()">SAVE</button>`);
 }
 function emptyNotes(){
-  return {notes:"", pain:{shoulder:false, knee:false, back:false, elbow:false, other:""}, swapRequests:[]};
+  return {notes:Logic.coachNotes([]), pain:null, swapRequests:[]};
 }
-function submitNotes(skip){
+function submitNotes(){
   const cb=window._notesCb;
-  const items=window._notesItems||[];
-  window._notesCb=null; window._notesItems=null;
-  let payload=emptyNotes();
-  if(!skip){
-    const g=id=>{ const el=document.getElementById(id); return !!(el && el.checked); };
-    const gv=id=>{ const el=document.getElementById(id); return el && el.value ? el.value.trim() : ""; };
-    const swapRequests=[];
-    items.forEach((it,i)=>{ if(g("sw-"+i)) swapRequests.push({exerciseId:it.exerciseId, note:""}); });
-    payload={
-      notes:gv("pnNotes"),
-      pain:{shoulder:g("pnSh"), knee:g("pnKn"), back:g("pnBk"), elbow:g("pnEl"), other:gv("pnOt")},
-      swapRequests
-    };
-  }
+  window._notesCb=null;
+  const answers=Logic.COACH_QUESTIONS.map((q,i)=>{
+    const el=document.getElementById("cq"+i);
+    return el && el.value ? el.value : "";
+  });
+  const payload={notes:Logic.coachNotes(answers), pain:null, swapRequests:[]};
   closeModal();
   if(cb) cb(payload);
 }
 
-function sealSession(name, xp, det, extra, structured, exercises){
-  openNotes(exercises||[], function(n){
+function sealSession(name, xp, det, extra, structured){
+  openNotes(function(n){
     const doc=Object.assign({
       source:"fallback", kind:"lift", date:todayStr(), title:name, startedAt:null
     }, structured||{}, n, {finishedAt:planNow()});

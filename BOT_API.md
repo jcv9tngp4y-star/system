@@ -197,7 +197,7 @@ The phone may update **only** `status` and `clientUpdatedAt`. A rules deploy rej
 - `weight` is pounds. Negative means assistance (dips). Omit or `null` for bodyweight.
 - `repsLo` / `repsHi` are the target range. A single `reps` number is accepted and used for both.
 - `restSec` on the block is the default; a set may override it.
-- `swaps` are optional in-session replacements. The athlete can tap one. The log stores `swappedFrom` as the original id. This is separate from a post-workout "please swap this next time" request.
+- `swaps` are optional in-session replacements. The athlete can tap one. The log stores `swappedFrom` as the original id. The swap menu always keeps that original exercise, so they can swap back during the session. This is separate from what they type afterward in the coach notes.
 
 On a coach plan the app records the sets and, for an id it already knows, may raise the stored e1RM **best**. It does not change `weight`, `fails`, or calibration.
 
@@ -225,7 +225,39 @@ On a coach plan the app records the sets and, for an id it already knows, may ra
 
 `mode` is `hold` (uses `sec`) or `reps` (uses `reps`). Shorthand: `{ "type": "prehab", "exerciseId": "rpec", "sec": 45, "sets": 2 }`.
 
+`perSide: true` means **each set** is done on both sides. The phone shows `10 / side` or `30s / side` on every set. It does not turn set 1 into "left only".
+
 Coach stretch blocks do not advance the built-in stretch targets (`recN`). Fallback recovery days still do.
+
+### Block: `core`
+
+Same item schema as `stretch` (reps or hold, `sets`, `perSide`). The phone labels it core work, not stretching. A hold gets an in-app countdown.
+
+```json
+{
+  "type": "core",
+  "title": "Core",
+  "items": [
+    {
+      "exerciseId": "deadbug",
+      "name": "Dead Bug",
+      "mode": "reps",
+      "sets": 2,
+      "reps": 8,
+      "perSide": true
+    },
+    {
+      "exerciseId": "plank",
+      "name": "Plank",
+      "mode": "hold",
+      "sets": 1,
+      "sec": 30
+    }
+  ]
+}
+```
+
+A `stretch` block whose title is exactly `Core` is also shown as core work, so an older plan does not need a rewrite. New plans should send `"type": "core"`. Other stretch blocks stay stretches.
 
 ### Block: `cardio`
 
@@ -278,9 +310,16 @@ Written when a dungeon is cleared. `source` is `bot` (this plan), `fallback` (bu
   "effortLabel": "ok",
   "xp": 250,
   "tonnage": 8400,
-  "notes": "Right shoulder grumbled on the last bench set.",
-  "pain": { "shoulder": true, "knee": false, "back": false, "elbow": false, "other": "" },
-  "swapRequests": [{ "exerciseId": "ohp", "note": "" }],
+  "notes": {
+    "How did the workout feel overall?": "Solid. Last set was the hard one.",
+    "Anything feel too easy or too heavy?": "Hack squat was heavy.",
+    "Any pain, tightness or discomfort? Where?": "",
+    "Did you change or swap anything?": "Hack squat to leg press.",
+    "Energy, sleep or food today?": "",
+    "Anything else for your coach?": ""
+  },
+  "pain": null,
+  "swapRequests": [],
   "exercises": [
     {
       "exerciseId": "bench",
@@ -299,13 +338,15 @@ Written when a dungeon is cleared. `source` is `bot` (this plan), `fallback` (bu
 }
 ```
 
-`effort` is the debrief: `1` easy, `2` ok, `3` brutal.
+New sessions do not ask for an effort rating. Older sessions may still have `effort` (`1` easy, `2` ok, `3` brutal) and `effortLabel`. Leave those fields alone when you read them.
+
+`notes` on a new session is an object of question → answer. Every question is present. An empty string means they left it blank. Nothing is required. Older sessions stored `notes` as a plain string, plus `pain` (`shoulder`, `knee`, `back`, `elbow`, `other`) and `swapRequests`. Those shapes still appear on old documents; read a string `notes` as the free-text answer, and read an object `notes` as the six questions.
 
 Every planned set is an object with `planned` and `actual`. Identity is `exerciseId`, not the display name. `actual.skipped` is true when the set was not done. `explicitSkip` is true when they hit SKIP rather than leaving it blank.
 
-`blocks` repeats lifts and also holds stretch, cardio, and skill results:
+`blocks` repeats lifts and also holds core, stretch, cardio, and skill results:
 
-- stretch: `planned.sets`, `actual.doneSets`, plus per-hold `sets[]`
+- core and stretch: `planned.sets`, `planned.mode`, `planned.perSide`, `actual.doneSets`, plus per-set `sets[]`
 - cardio: `planned.minutes`, `actual.minutes`
 - skill `made`: `planned.targetMakes`, `actual.makes`, `actual.attempts`
 - skill `timed`: `planned.seconds`, `actual.seconds`
@@ -314,13 +355,30 @@ The LOG tab still stores the human line (`users/{uid}/journal/{id}` with `d`, `n
 
 ### Notes
 
-If they typed anything, flagged pain, or requested a swap, the same payload is also at:
+If they answered any coach question, or an older session flagged pain or a swap, the same payload is also at:
 
 ```
 users/{uid}/notes/{sessionId}
 ```
 
-`pain.shoulder` is always present on a session (false when they skipped the notes step).
+`text` is the answers joined into one string (or the old free-text note). `answers` is the question object when the new screen was used. Older notes documents have `pain` and `swapRequests` and no `answers`.
+
+## Daily quest exercise ids
+
+Reps and running minutes logged in a workout are added to that day's daily quest when the exercise matches the quest. Use these ids (a display name that clearly says the same thing also counts).
+
+| Quest | Count these `exerciseId`s | Do not count |
+| --- | --- | --- |
+| Squats (also "Air squats") | `bwsquat`, `airsquat`, `squatbw`, `bodyweightsquat` | `squat` (barbell), `hack`, `legpress`, goblet squat |
+| Push-ups (also "Wall push-ups", "Push-ups (knees ok)") | `pushup`, `pushups`, `kneepu`, `kneepushup`, `inclinepu`, `jpush`, `awpu`, `wallpu` | bench, overhead press |
+| Sit-ups (also "Crunches") | `situp`, `situps`, `crunch`, `crunches` | cable crunch unless the id is `crunch` |
+| Glute bridges | `bridge`, `glutebridge`, `gbridge`, `hipbridge` | hip thrust |
+| Sit-to-stands | `sitstand`, `sittostand`, `sts` | |
+| Run minutes | cardio block `run`, `jog`, `treadmill`, `outdoorrun` with the minutes they log | bike, row |
+| Walk minutes | cardio block `walk`, `briskwalk` | only profiles whose quest is a walk |
+| Plank minutes | `plank` hold, seconds rounded to minutes | |
+
+`perSide: true` on a rep item counts both sides (8 / side → 16) toward the quest. Only sets they mark done are counted. A finished run block uses `actualMin`. The quest does not move again once that day is already cleared.
 
 ## Progression ownership
 
@@ -418,7 +476,7 @@ Signed-in phone, against the emulator:
 4. Confirm the upload if this browser already has a log.
 5. In the emulator UI or a script, write `users/{uid}/plans/{today}` using the schema above.
 6. Quest should show the plan offline after one online load (toggle offline in devtools and reload).
-7. Log a set at a different weight than the target, finish, and confirm `sessions/{id}` has `planned` and `actual`, `pain.shoulder`, and that `exercises/{id}.weight` did not change.
+7. Log a set at a different weight than the target, finish, and confirm `sessions/{id}` has `planned` and `actual`, `notes` as the question object, and that `exercises/{id}.weight` did not change. Older sessions may still have `pain.shoulder`.
 8. Open `?emulator=0` or clear `theSystem_emulator` in localStorage to talk to production again.
 
 Signed-out: don't sign in. The quest, log, weights, and guild read behave as before. Hunter's Monday no longer lists Bulgarian split squats; Owen's and Joy's programs are unchanged.

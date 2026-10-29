@@ -548,7 +548,7 @@ test("a published plan previews as one line per block", ()=>{
   assert.equal(view.title, "Chest, shoulders & triceps");
   assert.equal(view.notes, "Stop if the shoulder bites.");
   assert.deepEqual(view.rows[0], {name:"Barbell Bench Press", value:"1 × 6–8 @ 150 lb · 1 × 8–10 @ 140 lb"});
-  assert.deepEqual(view.rows[1], {name:"Doorway Pec Stretch", value:"1 move"});
+  assert.deepEqual(view.rows[1], {name:"Doorway Pec Stretch", value:"2 × 45s / side"});
   assert.deepEqual(view.rows[2], {name:"Easy bike", value:"20 min"});
   assert.deepEqual(view.rows[3], {name:"Free throws", value:"20 makes"});
   const ranged = Logic.planPreview({
@@ -623,9 +623,9 @@ test("Oct 29 deadlift plan previews as compact rows and beats the standard week"
     {name:"Hack Squat", value:"2 × 8 @ 90 lb"},
     {name:"Lying Leg Curl", value:"2 × 10 @ 60 lb"},
     {name:"Cable External Rotation", value:"2 × 15 @ 10 lb · per arm"},
-    {name:"Core", value:"1 move"},
+    {name:"Core", value:"2 × 8 / side"},
     {name:"Form shooting", value:"5 min · optional"},
-    {name:"Cool-down", value:"1 move"}
+    {name:"Cool-down", value:"2 × 45s / side"}
   ]);
   assert.equal(view.rows[2].value.indexOf("75 lb × 8"), -1);
   assert.ok(!/Pigeon|Dead bug|cranky|Wall slides/.test(JSON.stringify(view.rows)));
@@ -643,4 +643,120 @@ test("Oct 29 deadlift plan previews as compact rows and beats the standard week"
   assert.equal(rows[1].source, "plan");
   assert.equal(rows[1].name, "Legs (deadlift day) · easy start");
   assert.notEqual(rows[1].name, "LEGS (QUAD FOCUS)");
+});
+
+test("perSide is each set, and a core block stays core work", ()=>{
+  assert.equal(Logic.setSideLabel({mode:"reps", reps:10, perSide:true}), "10 / side");
+  assert.equal(Logic.setSideLabel({mode:"hold", sec:30, perSide:true}), "30s / side");
+  assert.equal(Logic.setSideLabel({mode:"reps", reps:8, perSide:false}), "8 reps");
+  const core = Logic.normalizePlan({
+    title:"Core day",
+    blocks:[
+      {type:"core", title:"Core", items:[
+        {exerciseId:"deadbug", name:"Dead Bug", mode:"reps", sets:2, reps:8, perSide:true},
+        {name:"Leg Swings", mode:"reps", sets:2, reps:10, perSide:true}
+      ]},
+      {type:"stretch", title:"Core", items:[
+        {exerciseId:"plank", name:"Plank", mode:"hold", sets:1, sec:30}
+      ]},
+      {type:"stretch", title:"Hips", items:[
+        {exerciseId:"pigeon", name:"Pigeon", mode:"hold", sets:2, sec:45, perSide:true}
+      ]}
+    ]
+  });
+  assert.equal(core.blocks[0].type, "core");
+  assert.equal(core.blocks[0].items[1].exerciseId, null);
+  assert.equal(core.blocks[0].items[1].name, "Leg Swings");
+  assert.equal(core.blocks[1].type, "core");
+  assert.equal(core.blocks[2].type, "stretch");
+  const sess = Logic.buildPlanSession(core, "2026-10-29T12:00:00.000Z");
+  assert.equal(sess.blocks[0].type, "core");
+  assert.equal(sess.blocks[0].items[0].checks.length, 2);
+  const view = Logic.planPreview(core.blocks[0].type ? {
+    title:"Core",
+    blocks:[core.blocks[0]]
+  } : null);
+  assert.equal(view.rows[0].name, "Core");
+  assert.equal(view.rows[0].value, "2 moves");
+});
+
+test("editing a weight updates later unfinished sets with that load", ()=>{
+  const sets=[
+    {w:90, done:false},
+    {w:90, done:false},
+    {w:90, done:true},
+    {w:100, done:false},
+    {w:90, done:false}
+  ];
+  assert.equal(Logic.cascadeWeight(sets, 0, 110), 2);
+  assert.deepEqual(sets.map(s=>s.w), [110, 110, 90, 100, 110]);
+  const later=[{w:90, done:false},{w:90, done:false},{w:90, done:false}];
+  Logic.cascadeWeight(later, 1, 80);
+  assert.deepEqual(later.map(s=>s.w), [90, 80, 80]);
+  const same=[{w:60, done:false},{w:60, done:false}];
+  assert.equal(Logic.cascadeWeight(same, 0, 60), 0);
+  assert.deepEqual(same.map(s=>s.w), [60, 60]);
+});
+
+test("the swap menu keeps the original exercise", ()=>{
+  const block={exerciseId:"hack", name:"Hack Squat", swaps:[
+    {exerciseId:"legpress", name:"Leg Press", note:"if the knees bark"}
+  ]};
+  assert.deepEqual(Logic.swapMenu(block).map(s=>s.exerciseId), ["legpress"]);
+  Logic.applySwap(block, Logic.swapMenu(block)[0]);
+  assert.equal(block.exerciseId, "legpress");
+  assert.equal(block.name, "Leg Press");
+  assert.equal(block.original.exerciseId, "hack");
+  assert.equal(block.swappedFrom, "hack");
+  assert.match(block.notes, /knees/);
+  const back=Logic.swapMenu(block);
+  assert.ok(back.some(s=>s.exerciseId==="hack" && s.revert));
+  assert.ok(!back.some(s=>s.exerciseId==="legpress"));
+  Logic.applySwap(block, back.filter(s=>s.revert)[0]);
+  assert.equal(block.exerciseId, "hack");
+  assert.equal(block.swappedFrom, null);
+  assert.ok(Logic.swapMenu(block).some(s=>s.exerciseId==="legpress"));
+});
+
+test("workout reps and running minutes map onto the daily quest", ()=>{
+  const hunter={reps:["Push-ups","Sit-ups","Squats"], timed:[{n:"Run", kind:"run"}]};
+  const credits=Logic.questCredits(hunter, [
+    {type:"lift", exerciseId:"bwsquat", name:"Bodyweight Squat", sets:[{done:true,r:10},{done:true,r:10},{done:false,r:10}]},
+    {type:"lift", exerciseId:"pushup", name:"Push-Up", sets:[{done:true,r:8}]},
+    {type:"lift", exerciseId:"situp", name:"Sit-ups", sets:[{done:true,r:12}]},
+    {type:"core", items:[{exerciseId:"deadbug", name:"Dead Bug", mode:"reps", reps:8, perSide:true, checks:[true,false]}]},
+    {type:"lift", exerciseId:"hack", name:"Hack Squat", sets:[{done:true,r:8}]},
+    {type:"cardio", exerciseId:"run", name:"Easy run", done:true, actualMin:6},
+    {type:"cardio", exerciseId:"bike", name:"Easy bike", done:true, actualMin:10}
+  ]);
+  const byIndex={};
+  credits.forEach(c=>{ byIndex[c.index]=c.amount; });
+  assert.equal(byIndex[0], 8);
+  assert.equal(byIndex[1], 12);
+  assert.equal(byIndex[2], 20);
+  assert.equal(byIndex[3], 6);
+  assert.equal(credits.length, 4);
+  const joy={reps:["Glute bridges","Air squats"], timed:[{n:"Plank", kind:"plank"}]};
+  const joyCredits=Logic.questCredits(joy, [
+    {type:"lift", exerciseId:"glutebridge", name:"Glute Bridge", sets:[{done:true,r:15}]},
+    {type:"core", items:[{exerciseId:"plank", name:"Plank", mode:"hold", sec:60, checks:[true]}]},
+    {type:"lift", exerciseId:"bwsquat", name:"Air Squat", sets:[{done:true,r:12}]}
+  ]);
+  const joyBy={};
+  joyCredits.forEach(c=>{ joyBy[c.index]=c.amount; });
+  assert.equal(joyBy[0], 15);
+  assert.equal(joyBy[1], 12);
+  assert.equal(joyBy[2], 1);
+});
+
+test("coach notes are one answer per question and old strings still read", ()=>{
+  const notes=Logic.coachNotes(["solid", "", "left knee", "swapped to leg press", "", ""]);
+  assert.equal(notes["How did the workout feel overall?"], "solid");
+  assert.equal(notes["Any pain, tightness or discomfort? Where?"], "left knee");
+  assert.equal(notes["Did you change or swap anything?"], "swapped to leg press");
+  assert.equal(notes["Anything else for your coach?"], "");
+  assert.equal(Object.keys(notes).length, Logic.COACH_QUESTIONS.length);
+  assert.equal(Logic.notesPlain("Right shoulder grumbled."), "Right shoulder grumbled.");
+  assert.match(Logic.notesPlain(notes), /left knee/);
+  assert.doesNotMatch(Logic.notesPlain(notes), /Anything else/);
 });
