@@ -140,6 +140,10 @@ function countdownHtml(){
     </div>
   </div>`;
 }
+function moveChecks(it){
+  if(!it.checks) it.checks=[];
+  return it.checks;
+}
 function startHold(bi,ii,i){
   const it=S.session.blocks[bi].items[ii];
   const sec=Math.round(Number(it.sec)||0);
@@ -150,7 +154,9 @@ function startHold(bi,ii,i){
     segments:per?[sec,sec]:[sec],
     perSide:per,
     onDone:function(){
-      it.checks[i]=true;
+      const checks=moveChecks(it);
+      while(checks.length<=i) checks.push(false);
+      checks[i]=true;
       it.at=planNow();
       save();
     }
@@ -369,7 +375,9 @@ function planSwap(bi,si){
 }
 function planStretchTog(bi,ii,i){
   const it=S.session.blocks[bi].items[ii];
-  it.checks[i]=!it.checks[i];
+  const checks=moveChecks(it);
+  while(checks.length<=i) checks.push(false);
+  checks[i]=!checks[i];
   it.at=planNow(); save(); vWorkout();
 }
 function planCardioMin(bi,v){
@@ -440,17 +448,11 @@ function planStructured(sess, notes){
       }
     } else if(b.type==="stretch" || b.type==="core"){
       for(const it of b.items||[]){
-        const checks=it.checks||[];
-        const doneN=checks.filter(Boolean).length;
-        const sets=checks.map((done,i)=>({
-          index:i,
-          planned:{sec:it.mode==="hold"?it.sec:null, reps:it.mode==="reps"?it.reps:null, perSide:!!it.perSide},
-          actual:{done:!!done, skipped:!done},
-          loggedAt:it.at||null
-        }));
-        blocks.push({type:b.type, exerciseId:it.exerciseId, name:it.name||"", planned:{sets:it.sets, mode:it.mode, sec:it.sec, reps:it.reps, perSide:!!it.perSide}, actual:{doneSets:doneN, done:doneN>0, skipped:doneN===0}, sets, loggedAt:it.at||null});
-        exercises.push({exerciseId:it.exerciseId, sets});
-        det.push((it.name||it.exerciseId)+": "+doneN+"/"+checks.length+(it.perSide?" / side":""));
+        const rec=Logic.recordMoveItem(it);
+        blocks.push(Object.assign({type:b.type}, rec));
+        exercises.push(rec);
+        const n=(it.checks||[]).length;
+        det.push((it.name||it.exerciseId)+": "+rec.actual.doneSets+"/"+n+(it.perSide?" / side":""));
       }
     } else if(b.type==="cardio"){
       blocks.push({type:"cardio", exerciseId:b.exerciseId||null, name:b.name||"", planned:{minutes:b.minutes}, actual:{minutes:Number(b.actualMin)||0, done:!!b.done, skipped:!!b.skipped || !b.done}, loggedAt:b.at||null});

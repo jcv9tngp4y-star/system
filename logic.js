@@ -162,6 +162,94 @@ function setsRecord(sets){
   }));
 }
 
+/* A dose may be a number or a string like "45s". Arrays are not doses. */
+function firstDose(v){
+  if(v==null || v==="" || typeof v==="boolean" || Array.isArray(v) || typeof v==="object") return null;
+  if(typeof v==="number") return isFinite(v) ? v : null;
+  const m=String(v).match(/-?\d+(?:\.\d+)?/);
+  if(!m) return null;
+  const n=Number(m[0]);
+  return isFinite(n) ? n : null;
+}
+function firstOf(obj, keys){
+  if(!obj) return null;
+  for(let i=0;i<keys.length;i++){
+    const n=firstDose(obj[keys[i]]);
+    if(n!=null) return n;
+  }
+  return null;
+}
+/* Lifts store sets as a list of prescriptions. Core and stretch usually
+   store a count. Accept either, so a hold still has a duration and a row. */
+function prescriptionSets(sets){
+  if(!Array.isArray(sets) || !sets.length) return null;
+  if(typeof sets[0]!=="object" || sets[0]==null) return null;
+  return sets;
+}
+function normalizeMoveItem(it, block){
+  const src=it && typeof it==="object" ? it : {};
+  const prescribed=prescriptionSets(src.sets);
+  const counted=firstDose(src.sets!=null ? src.sets : src.holds);
+  const count=prescribed
+    ? prescribed.length
+    : Math.max(1, Math.round(counted!=null && counted>0 ? counted : 1));
+  let sec=firstOf(src, ["sec","seconds","second","duration","hold","time"]);
+  let reps=firstOf(src, ["reps","rep"]);
+  if(prescribed){
+    if(sec==null) sec=firstOf(prescribed[0], ["sec","seconds","second","duration","hold","time"]);
+    if(reps==null) reps=firstOf(prescribed[0], ["reps","rep"]);
+  }
+  const modeRaw=String(src.mode||"").toLowerCase();
+  let mode;
+  if(modeRaw==="reps" || modeRaw==="rep") mode="reps";
+  else if(modeRaw==="hold" || modeRaw==="timed" || modeRaw==="time" || modeRaw==="sec" || modeRaw==="seconds") mode="hold";
+  else if(reps!=null && sec==null) mode="reps";
+  else mode="hold";
+  const perText=String(src.per||"");
+  return {
+    exerciseId: src.exerciseId || (block && block.exerciseId) || null,
+    name: String(src.name||src.title||"").trim(),
+    mode,
+    sets: count,
+    sec: sec,
+    reps: reps,
+    perSide: src.perSide===true || src.perSide==="true" || /side/i.test(perText),
+    note: src.note||""
+  };
+}
+/* The saved log for one stretch or core item. Same fields either way:
+   planned, actual.done / doneSets, per-set actual.done, loggedAt. */
+function recordMoveItem(it){
+  const src=it && typeof it==="object" ? it : {};
+  const checks=Array.isArray(src.checks) ? src.checks : [];
+  const doneN=checks.filter(Boolean).length;
+  const repsMode=src.mode==="reps";
+  const sets=checks.map((done,i)=>({
+    index:i,
+    planned:{
+      sec: repsMode ? null : (src.sec!=null ? src.sec : null),
+      reps: repsMode ? (src.reps!=null ? src.reps : null) : null,
+      perSide: !!src.perSide
+    },
+    actual:{done:!!done, skipped:!done},
+    loggedAt: src.at||null
+  }));
+  return {
+    exerciseId: src.exerciseId||null,
+    name: src.name||"",
+    planned:{
+      sets: src.sets!=null ? src.sets : checks.length,
+      mode: repsMode ? "reps" : "hold",
+      sec: src.sec!=null ? src.sec : null,
+      reps: src.reps!=null ? src.reps : null,
+      perSide: !!src.perSide
+    },
+    actual:{doneSets:doneN, done:doneN>0, skipped:doneN===0},
+    sets,
+    loggedAt: src.at||null
+  };
+}
+
 /* Accept a coach plan document. Returns null when it should not replace
    the built-in week (missing blocks, or nothing we know how to run). */
 function normalizePlan(raw){
@@ -169,7 +257,7 @@ function normalizePlan(raw){
   const blocks=[];
   for(const b of raw.blocks){
     if(!b || typeof b!=="object") continue;
-    let type=b.type;
+    let type=String(b.type==null?"":b.type).trim().toLowerCase();
     if(type==="prehab") type="stretch";
     /* A stretch block titled exactly "Core" is core work. New plans should
        send type "core"; older Core blocks still run, just not as stretches. */
@@ -192,25 +280,16 @@ function normalizePlan(raw){
     } else if(type==="stretch" || type==="core"){
       let items=Array.isArray(block.items) ? block.items.slice() : null;
       if(!items || !items.length){
-        if(!block.exerciseId) continue;
-        const nSets = typeof block.sets==="number" ? block.sets : (typeof block.holds==="number" ? block.holds : 1);
+        if(!block.exerciseId && !block.name && !block.title) continue;
         items=[{
-          exerciseId:block.exerciseId, name:block.name||"",
-          mode:block.mode|| (block.reps!=null ? "reps" : "hold"),
-          sets:nSets, sec:block.sec!=null?block.sec:null, reps:block.reps!=null?block.reps:null,
-          perSide:!!block.perSide, note:block.note||""
+          exerciseId:block.exerciseId, name:block.name||block.title||"",
+          mode:block.mode, sets:block.sets!=null?block.sets:block.holds,
+          sec:block.sec, seconds:block.seconds, duration:block.duration,
+          hold:block.hold, time:block.time, reps:block.reps,
+          perSide:block.perSide, note:block.note||""
         }];
       }
-      block.items=items.map(it=>({
-        exerciseId: it.exerciseId||block.exerciseId||null,
-        name: it.name||"",
-        mode: it.mode==="reps" ? "reps" : "hold",
-        sets: Math.max(1, Number(it.sets||it.holds)||1),
-        sec: it.sec!=null ? Number(it.sec) : null,
-        reps: it.reps!=null ? Number(it.reps) : null,
-        perSide: !!it.perSide,
-        note: it.note||""
-      })).filter(it=>it.exerciseId || it.name);
+      block.items=items.map(it=>normalizeMoveItem(it, block)).filter(it=>it.exerciseId || it.name);
       if(!block.items.length) continue;
     } else if(type==="cardio"){
       block.minutes = Number(block.minutes||block.min||0);
@@ -661,8 +740,9 @@ function setSideLabel(it){
 }
 function itemSideDose(it){
   if(!it) return "";
-  const sets=Math.max(1, Number(it.sets!=null ? it.sets : it.holds)||1);
-  return sets+" × "+setSideLabel(it);
+  const norm=(it.mode==="reps" || it.mode==="hold") && typeof it.sets==="number" ? it : normalizeMoveItem(it);
+  const sets=Math.max(1, Number(norm.sets)||1);
+  return sets+" × "+setSideLabel(norm);
 }
 function movesLabel(n){
   return n+" "+(n===1 ? "move" : "moves");
@@ -923,6 +1003,7 @@ const Logic={
   addIsoDays, friendlyWorkoutName, weekAhead, monthDay,
   QUEST_START, questCurve, settleQuest, recordQuestClear, nudgeQuest, restartQuest, questStatus,
   planPreview, setSideLabel, itemSideDose, cascadeWeight, swapMenu, applySwap,
+  normalizeMoveItem, recordMoveItem,
   COACH_QUESTIONS, coachNotes, notesPlain, questKind, questCredits
 };
 if(typeof module!=="undefined" && module.exports) module.exports=Logic;
