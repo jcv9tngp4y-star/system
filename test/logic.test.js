@@ -749,6 +749,66 @@ test("workout reps and running minutes map onto the daily quest", ()=>{
   assert.equal(joyBy[2], 1);
 });
 
+test("a core block records holds and reps the way a stretch does", ()=>{
+  const plan=Logic.normalizePlan({
+    title:"Push",
+    blocks:[
+      {type:"Core", title:"Core", items:[
+        {exerciseId:"plank", name:"Plank", mode:"hold", seconds:"45s", sets:[{sec:45},{sec:45}]},
+        {exerciseId:"crunch", title:"Crunches", mode:"Reps", sets:[{reps:15},{reps:15},{reps:15}]}
+      ]},
+      {type:"stretch", title:"Warm-up", items:[
+        {exerciseId:"pushup", name:"Push-ups", sets:1, reps:8},
+        {name:"Bodyweight Squat", exerciseId:"bwsquat", mode:"reps", sets:1, reps:10}
+      ]},
+      {type:"cardio", exerciseId:"run", name:"Easy run", minutes:6}
+    ]
+  });
+  assert.equal(plan.blocks[0].type, "core");
+  assert.equal(plan.blocks[0].items[0].mode, "hold");
+  assert.equal(plan.blocks[0].items[0].sets, 2);
+  assert.equal(plan.blocks[0].items[0].sec, 45);
+  assert.equal(plan.blocks[0].items[1].mode, "reps");
+  assert.equal(plan.blocks[0].items[1].name, "Crunches");
+  assert.equal(plan.blocks[0].items[1].sets, 3);
+  assert.equal(plan.blocks[0].items[1].reps, 15);
+  const sess=Logic.buildPlanSession(plan, "2026-11-02T15:00:00.000Z");
+  const plank=sess.blocks[0].items[0];
+  const crunch=sess.blocks[0].items[1];
+  assert.equal(plank.checks.length, 2);
+  assert.equal(crunch.checks.length, 3);
+  plank.checks[0]=true;
+  plank.at="2026-11-02T15:10:00.000Z";
+  crunch.checks=[true,true,false];
+  crunch.at="2026-11-02T15:12:00.000Z";
+  sess.blocks[1].items[0].checks[0]=true;
+  sess.blocks[1].items[1].checks[0]=true;
+  sess.blocks[2].done=true;
+  sess.blocks[2].actualMin=6;
+  const hold=Logic.recordMoveItem(plank);
+  const reps=Logic.recordMoveItem(crunch);
+  assert.equal(hold.actual.doneSets, 1);
+  assert.equal(hold.actual.done, true);
+  assert.equal(hold.sets[0].actual.done, true);
+  assert.equal(hold.sets[1].actual.done, false);
+  assert.equal(hold.sets[0].planned.sec, 45);
+  assert.equal(hold.sets[0].loggedAt, plank.at);
+  assert.equal(hold.loggedAt, plank.at);
+  assert.equal(reps.planned.mode, "reps");
+  assert.equal(reps.actual.doneSets, 2);
+  assert.equal(reps.sets[0].planned.reps, 15);
+  assert.equal(reps.sets[0].actual.done, true);
+  assert.equal(reps.sets[2].actual.skipped, true);
+  const hunter={reps:["Push-ups","Sit-ups","Squats"], timed:[{n:"Run", kind:"run"}]};
+  const credits=Logic.questCredits(hunter, sess.blocks);
+  const by={};
+  credits.forEach(c=>{ by[c.index]=c.amount; });
+  assert.equal(by[0], 8);
+  assert.equal(by[1], 30);
+  assert.equal(by[2], 10);
+  assert.equal(by[3], 6);
+});
+
 test("coach notes are one answer per question and old strings still read", ()=>{
   const notes=Logic.coachNotes(["solid", "", "left knee", "swapped to leg press", "", ""]);
   assert.equal(notes["How did the workout feel overall?"], "solid");

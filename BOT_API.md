@@ -231,7 +231,7 @@ Coach stretch blocks do not advance the built-in stretch targets (`recN`). Fallb
 
 ### Block: `core`
 
-Same item schema as `stretch` (reps or hold, `sets`, `perSide`). The phone labels it core work, not stretching. A hold gets an in-app countdown.
+Same item schema as `stretch` (reps or hold, `sets`, `perSide`). The phone labels it core work, not stretching. A hold gets an in-app countdown, and finishing it marks that set done. `sets` is a count. A list of `{ "sec": 45 }` or `{ "reps": 15 }` is accepted too, and a hold may use `seconds` instead of `sec`. Completed crunches, push-ups, and bodyweight squats in a core or stretch block count toward the matching daily-quest part.
 
 ```json
 {
