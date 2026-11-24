@@ -14,7 +14,8 @@ const Cloud=(function(){
     "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"
   ];
   let auth=null, db=null, user=null, activeUid=null;
-  let authReady=false, planReady=false, plan=null;
+  let authReady=false, planReady=false, plan=null, planError=false;
+  let listenedDay="";
   let planUnsub=null, userUnsub=null, progUnsub=null, reqUnsub=null, intakeUnsub=null;
   let weekUnsubs=[];
   let program=null, planRequest=null, schedulePlansMap={};
@@ -233,6 +234,7 @@ const Cloud=(function(){
     planUnsub=userUnsub=progUnsub=reqUnsub=intakeUnsub=null;
     weekUnsubs=[];
     schedulePlansMap={};
+    listenedDay="";
   }
   function schedulePlans(){
     const out=Object.assign({}, schedulePlansMap);
@@ -419,16 +421,20 @@ const Cloud=(function(){
   function listen(){
     stopListen();
     const date=todayStr();
+    listenedDay=date;
     planReady=false;
+    planError=false;
+    plan=null;
     planUnsub=userRef().collection("plans").doc(date).onSnapshot(snap=>{
       planReady=true;
+      planError=false;
       if(!snap.exists){ plan=null; }
       else {
         const data=snap.data()||{};
         plan=Logic.normalizePlan(Object.assign({}, data, {date:data.date||date}));
       }
       notify();
-    }, ()=>{ planReady=true; status="offline"; notify(); });
+    }, ()=>{ planReady=true; planError=true; status="offline"; notify(); });
     /* A document-id range on a subcollection compares the full path, so it
        matches nothing. Read each of the seven plan documents by id. */
     for(let i=0;i<7;i++){
@@ -517,6 +523,7 @@ const Cloud=(function(){
         persist();
         await settleIntake();
         listen();
+        await flushPendingWrites();
         clearLegacyLeaderboard();
       }
     } finally {
@@ -585,10 +592,21 @@ const Cloud=(function(){
     pullChildren().then(()=>{ persist(); notify(); }).catch(()=>{});
   }
 
+  let pendingSession=null, pendingPlan=null;
+  function flushPendingWrites(){
+    const plan=pendingPlan;
+    const sess=pendingSession;
+    pendingPlan=null;
+    pendingSession=null;
+    if(plan) markPlanStatus(plan.date, plan.status);
+    if(sess) return writeSession(sess);
+    return Promise.resolve();
+  }
   async function writeSession(doc){
     if(!doc) return;
     if(!doc.id) doc.id=(doc.date||"session")+"-"+Date.now().toString(36);
-    if(!user || !db || blocked) return;
+    if(!user || !db || blocked){ pendingSession=doc; return; }
+    pendingSession=null;
     const clean=JSON.parse(JSON.stringify(doc));
     try{
       await userRef().collection("sessions").doc(doc.id).set(clean);
@@ -603,18 +621,25 @@ const Cloud=(function(){
           answers:answers, pain:pain, swapRequests:swaps, createdAt:doc.finishedAt||new Date().toISOString()
         });
       }
-      const top=S.log && S.log[0];
-      if(top){
-        if(!top.id) top.id=doc.id;
-        await userRef().collection("journal").doc(top.id).set({
-          id:top.id, d:top.d||null, name:top.name||"", xp:top.xp||0, det:top.det||""
+      const logs=S.log||[];
+      let logged=null;
+      for(let i=0;i<logs.length;i++){
+        if(logs[i] && logs[i].id===doc.id){ logged=logs[i]; break; }
+      }
+      if(!logged) logged=logs[0]||null;
+      if(logged){
+        if(!logged.id) logged.id=doc.id;
+        await userRef().collection("journal").doc(logged.id).set({
+          id:logged.id, d:logged.d||null, name:logged.name||"", xp:logged.xp||0, det:logged.det||""
         });
         persist();
       }
     }catch(e){ status="offline"; }
   }
   function markPlanStatus(date, next){
-    if(!user || !db || !date) return;
+    if(!date) return;
+    if(!user || !db){ pendingPlan={date:date, status:next}; return; }
+    pendingPlan=null;
     userRef().collection("plans").doc(date).update({
       status:next, clientUpdatedAt:new Date().toISOString()
     }).catch(()=>{});
@@ -669,7 +694,7 @@ const Cloud=(function(){
       auth.onAuthStateChanged(u=>{
         authReady=true;
         if(!u){
-          user=null; activeUid=null; plan=null; planReady=true;
+          user=null; activeUid=null; plan=null; planReady=true; planError=false;
           program=null; planRequest=null;
           stopListen();
           if(!blocked) status=emu?"emulator":"signed-out";
@@ -719,6 +744,23 @@ const Cloud=(function(){
     if(!auth){ done(); return; }
     auth.signOut().then(done).catch(done);
   }
+  function listenedDate(){ return listenedDay; }
+  function planFailed(){ return planError; }
+  /* Re-subscribe when the calendar day changed. Same-day calls are a no-op
+     so a quest re-render does not drop the plan and flash loading. */
+  function ensureToday(){
+    if(!user || !db) return false;
+    const date=todayStr();
+    if(listenedDay===date && planUnsub) return false;
+    listen();
+    return true;
+  }
+  function reloadToday(){
+    if(!user || !db) return false;
+    listen();
+    return true;
+  }
+
   function useLiveCloud(){
     try{ localStorage.removeItem("theSystem_emulator"); }catch(e){}
     location.search="?emulator=0";
@@ -751,6 +793,7 @@ const Cloud=(function(){
     start, onSave, pausePush, catchUp, writeSession, writeJournalEntry, markPlanStatus, pushLeaderboard,
     emailSignIn, emailCreate, signOut, useLiveCloud, accountSection,
     uid, signedIn, authSettled, planResolved, todayPlan, blockedMessage, statusText, emulatorOn,
+    listenedDate, planFailed, ensureToday, reloadToday, listen,
     intakeContext, saveIntakeDraft, submitIntake, dismissIntake, awaitingPlan, upcomingDays,
     schedulePlans, programDoc,
     set onChange(fn){ handler=fn; },
