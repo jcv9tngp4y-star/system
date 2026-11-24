@@ -895,6 +895,162 @@ function notesPlain(notes){
   return lines.join("\n");
 }
 
+/* Calendar day of an instant in an IANA zone. en-CA parts stay YYYY-MM-DD
+   even when the zone is behind UTC (America/Toronto around midnight). */
+function localIsoDate(input, timeZone){
+  const d=input instanceof Date ? input : new Date(input);
+  if(!isFinite(d.getTime())) return "";
+  let tz=timeZone;
+  if(!tz){
+    try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){ tz="UTC"; }
+  }
+  try{
+    const parts=new Intl.DateTimeFormat("en-CA",{
+      timeZone:tz, year:"numeric", month:"2-digit", day:"2-digit"
+    }).formatToParts(d);
+    let y="", m="", day="";
+    for(let i=0;i<parts.length;i++){
+      const p=parts[i];
+      if(p.type==="year") y=p.value;
+      else if(p.type==="month") m=p.value;
+      else if(p.type==="day") day=p.value;
+    }
+    if(y.length===4 && m && day) return y+"-"+String(m).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+  }catch(e){}
+  return "";
+}
+function formatDayLabel(iso){
+  const ms=parseIsoDate(iso);
+  if(ms==null) return "";
+  const d=new Date(ms);
+  return WEEKDAY_SHORT[mondayIndex(iso)]+" "+MONTH_SHORT[d.getUTCMonth()]+" "+d.getUTCDate();
+}
+/* Coach planDate is already the training day. Otherwise use the local
+   calendar day of startedAt, not the UTC date. */
+function sessionStartDay(session, timeZone){
+  if(!session || typeof session!=="object") return "";
+  if(parseIsoDate(session.planDate)!=null) return session.planDate;
+  if(session.startedAt) return localIsoDate(session.startedAt, timeZone);
+  return "";
+}
+function sessionHasLoggedWork(session){
+  if(!session || typeof session!=="object") return false;
+  const blocks=Array.isArray(session.blocks)?session.blocks:[];
+  for(let i=0;i<blocks.length;i++){
+    const b=blocks[i];
+    if(!b) continue;
+    if(b.type==="lift" && (b.sets||[]).some(s=>s && s.done && !s.skipped)) return true;
+    if((b.type==="stretch" || b.type==="core") && (b.items||[]).some(it=>it && (it.checks||[]).some(Boolean))) return true;
+    if((b.type==="cardio" || b.type==="skill") && b.done && !b.skipped) return true;
+  }
+  const entries=session.entries;
+  if(entries && typeof entries==="object"){
+    const ids=Object.keys(entries);
+    for(let i=0;i<ids.length;i++){
+      const ent=entries[ids[i]];
+      if(ent && (ent.sets||[]).some(s=>s && s.done && !s.skipped)) return true;
+    }
+  }
+  if(session.timerDone || session.subDone) return true;
+  return false;
+}
+/* A session that started on an earlier local day is stored under that day.
+   Same-day sessions, and ones we cannot date, stay on today. */
+function finishFileDate(session, today, timeZone){
+  const start=sessionStartDay(session, timeZone);
+  if(start && today && start<today) return start;
+  return today||start||"";
+}
+function nextLastDone(current, fileDate){
+  if(parseIsoDate(fileDate)==null) return current||null;
+  if(parseIsoDate(current)==null) return fileDate;
+  return fileDate>current ? fileDate : current;
+}
+function sessionDisplayName(session){
+  if(!session) return "Workout";
+  const named=session.title||session.name;
+  if(named && String(named).trim()) return String(named).trim();
+  if(session.kind==="cardio") return "Endurance";
+  if(session.kind==="rec" || session.kind==="stretch" || session.kind==="rbonus") return "Recovery";
+  return "Workout";
+}
+function fileToast(title, iso){
+  const name=String(title||"Workout").trim()||"Workout";
+  const when=formatDayLabel(iso)||iso||"";
+  return "Filed your unfinished "+name+" workout under "+when;
+}
+function rollDailyState(daily, today){
+  if(!daily || typeof daily!=="object") return null;
+  const next=Object.assign({}, daily);
+  next.parts=Array.isArray(daily.parts)?daily.parts.slice():[];
+  if(parseIsoDate(today)!=null && next.todayD!==today){
+    next.todayD=today;
+    next.parts=next.parts.map(()=>0);
+  }
+  return next;
+}
+/* What the gate should do for one device state. Does not mutate `state`.
+   A signed-in athlete with no confirmed plan for today gets "loading" or
+   "hold", never the built-in program. */
+function reviewDay(state){
+  const s=state||{};
+  const today=s.today||"";
+  const tz=s.timeZone||"America/Toronto";
+  const signedIn=!!s.signedIn;
+  const authPending=!!s.authPending;
+  const original=s.session||null;
+  let session=original;
+  let lastDone=s.lastDone||null;
+  let sessionAction="none";
+  let fileDate="";
+  let toast="";
+  let markPlan="";
+  if(session){
+    const start=sessionStartDay(session, tz);
+    if(start && today && start<today){
+      if(sessionHasLoggedWork(session)){
+        sessionAction="file";
+        fileDate=start;
+        lastDone=nextLastDone(lastDone, fileDate);
+        toast=fileToast(sessionDisplayName(session), fileDate);
+        if(session.source==="bot" || session.kind==="plan") markPlan=session.planDate||fileDate;
+      } else {
+        sessionAction="discard";
+      }
+      session=null;
+    }
+  }
+  const plan=s.plan && typeof s.plan==="object" ? s.plan : null;
+  const planIsToday=!!(plan && plan.date===today);
+  const listened=s.listenedDate||"";
+  const needsRelisten=signedIn && listened!==today;
+  const planReady=s.planReady!==false;
+  const planError=!!s.planError;
+  const openPlan=planIsToday && plan.status!=="completed" && plan.status!=="skipped" && lastDone!==today;
+  const cleared=lastDone===today || (planIsToday && (plan.status==="completed" || plan.status==="skipped"));
+  let gate="fallback";
+  if(session) gate="raid";
+  else if(openPlan) gate="plan";
+  else if(authPending && !planIsToday) gate="loading";
+  else if(signedIn && needsRelisten && !planIsToday) gate="loading";
+  else if(signedIn && !planReady && !planIsToday) gate="loading";
+  else if(signedIn && planError && !planIsToday) gate="hold";
+  else if(cleared && (planIsToday || lastDone===today)) gate="done";
+  return {
+    sessionAction:sessionAction,
+    fileDate:fileDate,
+    finishDate:original ? finishFileDate(original, today, tz) : "",
+    lastDone:lastDone,
+    session:session,
+    needsRelisten:needsRelisten,
+    gate:gate,
+    canStart:gate==="plan",
+    toast:toast,
+    markPlan:markPlan,
+    daily:rollDailyState(s.daily, today)
+  };
+}
+
 function normQuestId(id){
   return String(id||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 }
@@ -1004,6 +1160,8 @@ const Logic={
   QUEST_START, questCurve, settleQuest, recordQuestClear, nudgeQuest, restartQuest, questStatus,
   planPreview, setSideLabel, itemSideDose, cascadeWeight, swapMenu, applySwap,
   normalizeMoveItem, recordMoveItem,
-  COACH_QUESTIONS, coachNotes, notesPlain, questKind, questCredits
+  COACH_QUESTIONS, coachNotes, notesPlain, questKind, questCredits,
+  localIsoDate, formatDayLabel, sessionStartDay, sessionHasLoggedWork,
+  finishFileDate, nextLastDone, sessionDisplayName, fileToast, rollDailyState, reviewDay
 };
 if(typeof module!=="undefined" && module.exports) module.exports=Logic;

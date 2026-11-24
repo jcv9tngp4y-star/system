@@ -47,7 +47,29 @@ function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ storageBlocke
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ storageBlocked=true; MEM[k]=v; } }
 
 const KEY = "theSystem_v1";
-const todayStr = () => new Date().toLocaleDateString("en-CA");
+function userTz(){
+  let tz="";
+  try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){}
+  if(!tz && typeof S!=="undefined" && S && S.tz) tz=S.tz;
+  if(tz && typeof S!=="undefined" && S && S.tz!==tz) S.tz=tz;
+  return tz||"UTC";
+}
+function todayStr(){
+  if(typeof Logic!=="undefined" && Logic.localIsoDate) return Logic.localIsoDate(new Date(), userTz());
+  try{
+    const parts=new Intl.DateTimeFormat("en-CA",{
+      timeZone:userTz(), year:"numeric", month:"2-digit", day:"2-digit"
+    }).formatToParts(new Date());
+    let y="", m="", d="";
+    for(const p of parts){
+      if(p.type==="year") y=p.value;
+      else if(p.type==="month") m=p.value;
+      else if(p.type==="day") d=p.value;
+    }
+    if(y && m && d) return y+"-"+String(m).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+  }catch(e){}
+  return new Date().toLocaleDateString("en-CA");
+}
 function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
 
 </script>
@@ -84,13 +106,16 @@ function isDeload(){
   });
 }
 function deloadPromptDue(){
+  const signedIn=!!(window.Cloud && Cloud.signedIn && Cloud.signedIn());
+  const planPending=signedIn && !!(window.Cloud.planResolved && !Cloud.planResolved());
+  const wrongDay=signedIn && !!(Cloud.listenedDate && Cloud.listenedDate() && Cloud.listenedDate()!==todayStr());
   return Logic.shouldPromptDeload({
     profileDeload: !!prof().deload,
     trainWeek: trainWeek(),
     deloadWk: S.deloadWk,
     deloadSkip: S.deloadSkip,
-    hasPlan: !!(window.Cloud && Cloud.todayPlan && Cloud.todayPlan()),
-    authPending: !!(window.Cloud && Cloud.authSettled && !Cloud.authSettled())
+    hasPlan: !!(typeof coachPlanToday==="function" && coachPlanToday()) || planPending || wrongDay,
+    authPending: !!(window.Cloud && Cloud.authSettled && !Cloud.authSettled()) || planPending || wrongDay
   });
 }
 function deloadW(w){ return w<0 ? w : Math.max(5, Math.round(w*0.85/5)*5); }
@@ -430,8 +455,7 @@ function timedIdx(kind){
 function checkStreak(){
   if(!S.daily.enabled) return;
   const t=todayStr();
-  const y=new Date(); y.setDate(y.getDate()-1);
-  const yStr=y.toLocaleDateString("en-CA");
+  const yStr=Logic.addIsoDays(t, -1);
   const anchor=S.daily.lastComplete;
   if(anchor && anchor<yStr){
     const gap=dayDiff(anchor,t);
@@ -443,12 +467,12 @@ function checkStreak(){
   }
 }
 function checkWorkStreak(){
-  const y=new Date(); y.setDate(y.getDate()-1);
-  const yStr=y.toLocaleDateString("en-CA");
+  const yStr=Logic.addIsoDays(todayStr(), -1);
   if(S.lastDone && S.lastDone<yStr && S.workStreak!==0){ S.workStreak=0; save(); }
 }
 function checkPenalty(){ checkStreak(); } /* legacy alias */
 function creditTimed(kind,m){
+  if(S.session && sessionFileDate(S.session)!==todayStr()) return;
   if(S.daily.lastComplete===todayStr()) return;
   const i=timedIdx(kind); if(i<0) return;
   const g=dailyGoals();
@@ -457,6 +481,7 @@ function creditTimed(kind,m){
 function creditRun(m){ creditTimed("run",m); }
 function applyQuestCredits(list){
   const out={lines:[], cleared:false, detail:""};
+  if(S.session && sessionFileDate(S.session)!==todayStr()) return out;
   if(!S.daily || S.daily.enabled===false || S.daily.lastComplete===todayStr()) return out;
   const t=todayStr();
   const goals=dailyGoals();
@@ -503,8 +528,7 @@ function completeDaily(opts){
   const t=todayStr(), items=dqItems(), p=prof();
   const kmEl=document.getElementById("dkm");
   if(kmEl){ const km=parseNum(kmEl.value); if(km>0 && km>S.daily.bestKm) S.daily.bestKm=km; }
-  const y=new Date(); y.setDate(y.getDate()-1);
-  const yStr=y.toLocaleDateString("en-CA");
+  const yStr=Logic.addIsoDays(t, -1);
   const prev=S.daily.lastComplete;
   S.daily.lastComplete=t; S.daily.count++;
   S.quest=Logic.recordQuestClear(S.quest, t, questCurve());
@@ -566,14 +590,19 @@ function cue(p){
 async function lockScreen(){ try{ if(navigator.wakeLock) WL=await navigator.wakeLock.request("screen"); }catch(e){} }
 function unlockScreen(){ try{ if(WL){ WL.release(); WL=null; } }catch(e){} }
 document.addEventListener("visibilitychange",()=>{
-  if(TMR && document.visibilityState==="visible"){
+  if(document.visibilityState!=="visible") return;
+  if(TMR){
     lockScreen(); wakeAudio();
     /* sync to the correct phase silently — no catch-up beep */
     const el=tmrElapsed();
     if(el<TMR.total){ let idx=0; while(TMR.cum[idx]<=el) idx++; TMR.idx=idx; }
     tick();
   }
+  onResume();
 });
+window.addEventListener("focus", function(){ onResume(); });
+window.addEventListener("pageshow", function(){ onResume(); });
+setInterval(function(){ onResume(true); }, 60000);
 
 function startTimer(phases,mode){
   initAudio(); lockScreen();
@@ -679,6 +708,7 @@ function poolState(){
   return S.wkPool;
 }
 function vQuest(){
+  prepareDay();
   checkStreak();
   checkWorkStreak();
   const t=todayStr(), p=prof();
@@ -810,21 +840,47 @@ function gateKind(pl){
   if(pl.t==="pool") return "RUN / STRETCH";
   return pl.sch?"RECOVERY":"RECOVERY (optional)";
 }
+function reloadRow(){
+  return `<button class="btn ghost" onclick="reloadToday()">RELOAD TODAY</button>`;
+}
 function gatePanel(t){
+  prepareDay();
+  const review=Logic.reviewDay(dayState());
   const gi=gateForToday();
   const pl=planFor(gi);
   const doneToday=S.lastDone===t;
-  const coach=window.Cloud && Cloud.todayPlan && Cloud.todayPlan();
+  const coach=coachPlanToday();
   let inner;
-  if(S.session){
+  if(review.gate==="raid" && S.session){
     inner=`<div class="qname">${sessTitle()}</div>
       <div class="qsub">RAID IN PROGRESS</div>
       <button class="btn" onclick="go('workout')">RE-ENTER DUNGEON</button>
       <button class="btn ghost" onclick="abandonQuest()">ABANDON RAID</button>`;
-  } else if(coach && !doneToday){
-    inner = (coach.status==="completed" || coach.status==="skipped")
-      ? `<div class="qname">COACH PLAN ${coach.status==="skipped"?"SKIPPED":"CLEARED"}</div><div class="qsub">${esc(coach.title||"")}</div>`
-      : planGateInner(coach);
+  } else if(review.gate==="loading"){
+    inner=`<div class="qname">TODAY'S PLAN</div>
+      <div class="qsub">LOADING</div>
+      <div class="muted" style="text-align:center">Checking today's coach plan.</div>`;
+  } else if(review.gate==="hold"){
+    inner=`<div class="qname">TODAY'S PLAN</div>
+      <div class="qsub">NOT LOADED</div>
+      <div class="muted" style="text-align:center">Couldn't confirm today's coach plan. Your log is still on this device.</div>`;
+  } else if(review.gate==="plan"){
+    inner=coach ? planGateInner(coach) : `<div class="qname">TODAY'S PLAN</div>
+      <div class="qsub">LOADING</div>
+      <div class="muted" style="text-align:center">Checking today's coach plan.</div>`;
+  } else if(review.gate==="done" && coach && (coach.status==="completed" || coach.status==="skipped") && pl.t!=="pool"){
+    inner=`<div class="qname">COACH PLAN ${coach.status==="skipped"?"SKIPPED":"CLEARED"}</div><div class="qsub">${esc(coach.title||"")}</div>`;
+  } else if((review.gate==="done" || (review.gate==="fallback" && doneToday)) && pl.t!=="pool"){
+    const bonusOk = BONK[bonusKeyFor(pl)] && S.recBonusD!==t;
+    const bonusDone = S.recBonusD===t;
+    inner=`<div class="qname">GATE CLEARED</div>
+      <div class="qsub">RETURNS TOMORROW</div>
+      ${bonusOk?`
+        <div class="qsub" style="color:var(--gold);margin-top:10px">⚠ BONUS QUEST AVAILABLE</div>
+        ${BONK[bonusKeyFor(pl)].map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join("")}
+        <button class="btn" onclick="startRecBonus()">ENTER RECOVERY BONUS (~6 MIN)</button>`
+      :bonusDone?`<div class="clearbanner">✓ RECOVERY BONUS CLEARED</div>`
+      :`<div class="muted" style="text-align:center;font-size:11px">One dungeon per day. Recovery is part of the training.</div>`}`;
   } else if(pl.t==="pool"){
     const ps=poolState();
     const rows=POOL_GATES.map((g,i)=>{
@@ -837,17 +893,6 @@ function gatePanel(t){
     inner=`<div class="qname">WEEKEND GATES</div>
       <div class="qsub">ONE RUN + ONE STRETCH · EITHER DAY · EACH ONCE PER WEEKEND</div>
       ${rows}${doneToday?`<div class="warn">A GATE WAS ALREADY CLEARED TODAY — THE OTHER WAITS FOR TOMORROW</div>`:btns||`<div class="clearbanner">✓ WEEKEND COMPLETE</div>`}`;
-  } else if(doneToday){
-    const bonusOk = BONK[bonusKeyFor(pl)] && S.recBonusD!==t;
-    const bonusDone = S.recBonusD===t;
-    inner=`<div class="qname">GATE CLEARED</div>
-      <div class="qsub">RETURNS TOMORROW</div>
-      ${bonusOk?`
-        <div class="qsub" style="color:var(--gold);margin-top:10px">⚠ BONUS QUEST AVAILABLE</div>
-        ${BONK[bonusKeyFor(pl)].map(e=>`<div class="goalrow"><span class="gname">${e.name}</span><span class="gval">${sideShort(e)}</span></div>`).join("")}
-        <button class="btn" onclick="startRecBonus()">ENTER RECOVERY BONUS (~6 MIN)</button>`
-      :bonusDone?`<div class="clearbanner">✓ RECOVERY BONUS CLEARED</div>`
-      :`<div class="muted" style="text-align:center;font-size:11px">One dungeon per day. Recovery is part of the training.</div>`}`;
   } else {
     let goals2="", sub=gateKind(pl);
     if(pl.t==="lift"){
@@ -882,7 +927,7 @@ function gatePanel(t){
       <button class="btn" onclick="startGate()">ENTER DUNGEON</button>`;
   }
   return `<div class="panel"><div class="ptitle"><div class="diamond"><span>◆</span></div>DUNGEON GATE</div>
-      <div class="pbody">${inner}</div></div>`;
+      <div class="pbody">${reloadRow()}${inner}</div></div>`;
 }
 function standardDayName(i){
   const pl=planFor(i);
@@ -1026,14 +1071,23 @@ function sessTitle(){
 }
 function abandonQuest(){
   modal(`<h2>⚠ WARNING</h2><div>Abandon the current quest?<br><span class="muted">Logged sets will be lost.</span></div>
-    <button class="btn danger" onclick="S.session=null;save();closeModal();go('quest')">ABANDON</button>
+    <button class="btn danger" onclick="confirmAbandon()">ABANDON</button>
     <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
+}
+function confirmAbandon(){
+  S.session=null;
+  save();
+  closeModal();
+  if(window.Cloud && Cloud.ensureToday) Cloud.ensureToday();
+  go("quest");
 }
 
 /* ---------- starting gates ---------- */
 function poolAvail(i){ const ps=poolState(); return !ps.used[i]; }
 function startPool(i){
   if(S.session){ go("workout"); return; }
+  prepareDay();
+  if(coachGateBlocksFallback()){ go("quest"); return; }
   if(S.lastDone===todayStr()) return;
   if(!poolAvail(i)) return;
   const g=POOL_GATES[i];
@@ -1048,6 +1102,8 @@ function mkRecSession(key,sched){
 }
 function startGate(force){
   if(S.session){ go("workout"); return; }
+  prepareDay();
+  if(coachGateBlocksFallback()){ go("quest"); return; }
   const gi=gateForToday(), pl=planFor(gi);
   if(!force && S.fastStart && fastHrs()>=14 && (pl.t==="lift"||pl.t==="cardio")){
     modal(`<h2>⚠ WARNING</h2><div>You are <b class="gold">${fastHrs().toFixed(1)} hours</b> into a fast.<br>
@@ -1214,6 +1270,7 @@ function togWu(i){
   save(); vWorkout();
 }
 function addDailyCredit(idx,n){
+  if(S.session && sessionFileDate(S.session)!==todayStr()) return;
   if(S.daily.lastComplete===todayStr()) return;
   const g=dailyGoals();
   S.daily.parts[idx]=Math.min(g[idx], (S.daily.parts[idx]||0)+n); save();
@@ -1301,17 +1358,24 @@ function pickRPE(r){ const cb=rpeCb; rpeCb=null;
   S.rpeLog=S.rpeLog||[]; S.rpeLog.unshift(r); if(S.rpeLog.length>12) S.rpeLog.length=12; save();
   closeModal(); if(cb) cb(r);
 }
-function finishQuest(){
-  const key=S.session.key;
+function collectLiftClear(){
+  const sess=S.session;
+  if(!sess || !sess.entries || !sess.key || !LIFTS[sess.key]) return null;
+  const key=sess.key;
   const lst=sessionLifts();
   let setsDone=0;
-  for(const e of lst) setsDone+=S.session.entries[e.id].sets.filter(s=>s.done).length;
-  if(!setsDone){ modal(`<h2>⚠ SYSTEM</h2><div>No sets logged. Complete at least one set.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
-  const bot=S.session.source==="bot";
+  for(const e of lst){
+    if(!sess.entries[e.id]) continue;
+    setsDone+=sess.entries[e.id].sets.filter(s=>s.done).length;
+  }
+  if(!setsDone) return null;
+  const bot=sess.source==="bot";
   const deload=isDeload() && !bot;
   let ton=0; const det=[], progNotes=[], structuredEx=[];
   for(const e of lst){
-    const ent=S.session.entries[e.id], st=exSt(e.id);
+    const ent=sess.entries[e.id];
+    if(!ent) continue;
+    const st=exSt(e.id);
     const res=Logic.progressExercise({
       exercise:e, sets:ent.sets, state:st,
       calibrating:!!ent.cal, deload, bot
@@ -1325,20 +1389,30 @@ function finishQuest(){
     structuredEx.push({exerciseId:e.id, sets:Logic.setsRecord(ent.sets)});
   }
   if(LIFTS[key].ab.length>1) S.gateV[key]=S.gateV[key]?0:1;
-  S.tonnage+=ton; S.quests++;
   const title=sessTitle();
-  const extra=`<div class="muted" style="text-align:left;font-size:12px;line-height:1.9">${progNotes.join("<br>")}</div>
-     <div style="margin-top:10px">Volume moved: <b class="gold">${Math.round(ton).toLocaleString()} lb</b></div>`;
-  const credited=applyQuestCredits(Logic.questCredits(prof(), lst.map(e=>({
-    type:"lift", exerciseId:e.id, name:e.name, sets:S.session.entries[e.id].sets
-  }))));
-  sealSession(title, prof().workXP, det.join("\n"), extra+questCreditHtml(credited), {
-    source: bot?"bot":"fallback", kind:"lift", title, date:todayStr(),
-    planDate: S.session.planDate||null, deload: !!isDeload(),
-    startedAt: S.session.startedAt||null,
-    exercises: structuredEx, blocks: structuredEx.map(x=>({type:"lift", exerciseId:x.exerciseId, sets:x.sets})),
-    tonnage: Math.round(ton)
-  });
+  const fileDate=sessionFileDate(sess);
+  return {
+    title:title, ton:ton, det:det.join("\n"),
+    extra:`<div class="muted" style="text-align:left;font-size:12px;line-height:1.9">${progNotes.join("<br>")}</div>
+     <div style="margin-top:10px">Volume moved: <b class="gold">${Math.round(ton).toLocaleString()} lb</b></div>`,
+    credits:Logic.questCredits(prof(), lst.map(e=>sess.entries[e.id] ? ({
+      type:"lift", exerciseId:e.id, name:e.name, sets:sess.entries[e.id].sets
+    }) : null).filter(Boolean)),
+    doc:{
+      source: bot?"bot":"fallback", kind:"lift", title:title, date:fileDate,
+      planDate: sess.planDate||null, deload: !!isDeload(),
+      startedAt: sess.startedAt||null,
+      exercises: structuredEx, blocks: structuredEx.map(x=>({type:"lift", exerciseId:x.exerciseId, sets:x.sets})),
+      tonnage: Math.round(ton)
+    }
+  };
+}
+function finishQuest(){
+  const built=collectLiftClear();
+  if(!built){ modal(`<h2>⚠ SYSTEM</h2><div>No sets logged. Complete at least one set.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
+  S.tonnage+=built.ton; S.quests++;
+  const credited=applyQuestCredits(built.credits);
+  sealSession(built.title, prof().workXP, built.det, built.extra+questCreditHtml(credited), built.doc);
 }
 
 /* ---------- cardio / recovery sessions ---------- */
@@ -1444,11 +1518,13 @@ function startRecTimer(){
   if(!ph.length){ modal(`<h2>⚠ SYSTEM</h2><div>Every stretch is already complete.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
   startTimer(ph,"rec");
 }
-function finishRec(){
-  const sess=S.session, lst=recList(sess), bonus=sess.kind==="rbonus";
-  let done=0, total=0, det=[];
-  const structuredEx=[];
+function collectRecClear(sess){
+  if(!sess || !sess.entries) return null;
+  const lst=recList(sess);
+  let done=0, total=0;
+  const det=[], structuredEx=[];
   for(const e of lst){
+    if(!sess.entries[e.id]) continue;
     const plannedAmount=recVal(e);
     const d=sess.entries[e.id].sets.filter(s=>s.done).length;
     total+=recRows(e); done+=d;
@@ -1465,56 +1541,74 @@ function finishRec(){
     }
     det.push(`${e.name}: ${d}/${recRows(e)} × ${recLbl(e)}`);
   }
-  if(!done){ modal(`<h2>⚠ SYSTEM</h2><div>Nothing logged. Complete at least one stretch.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
+  if(!done) return null;
+  const bonus=sess.kind==="rbonus";
   const all=done===total;
   let xp=(bonus?10:20)+(all?5:0);
   if(sess.payWork) xp=prof().workXP;
-  S.recDone++;
-  if(bonus){ S.recBonusD=todayStr(); }
-  if(sess.pool!==undefined){ poolState().used[sess.pool]=true; save(); }
-  const stretchDoc={
-    source:"fallback", kind:bonus?"rbonus":"stretch", title:recTitle(sess), date:todayStr(),
-    startedAt:sess.startedAt||null, exercises:structuredEx,
-    blocks:structuredEx.map(x=>({type:"stretch", exerciseId:x.exerciseId, sets:x.sets}))
+  const date=sessionFileDate(sess);
+  return {
+    bonus:bonus, xp:xp, det:det.join("\n"), title:recTitle(sess), date:date,
+    doc:{
+      source:"fallback", kind:bonus?"rbonus":"stretch", title:recTitle(sess), date:date,
+      startedAt:sess.startedAt||null, exercises:structuredEx,
+      blocks:structuredEx.map(x=>({type:"stretch", exerciseId:x.exerciseId, sets:x.sets}))
+    }
   };
-  if(bonus){
-    const entry={d:todayStr(), name:"RECOVERY BONUS", xp, det:det.join("\n")};
+}
+function finishRec(){
+  const sess=S.session;
+  const built=collectRecClear(sess);
+  if(!built){ modal(`<h2>⚠ SYSTEM</h2><div>Nothing logged. Complete at least one stretch.</div><button class="btn" onclick="closeModal()">OK</button>`); return; }
+  S.recDone++;
+  if(built.bonus){ S.recBonusD=built.date; }
+  if(sess.pool!==undefined){ poolState().used[sess.pool]=true; save(); }
+  if(built.bonus){
+    const entry={d:built.date, name:"RECOVERY BONUS", xp:built.xp, det:built.det};
     S.log.unshift(entry);
     S.structLog=S.structLog||[];
-    stretchDoc.id=todayStr()+"-bonus-"+Date.now().toString(36);
-    stretchDoc.finishedAt=new Date().toISOString();
-    stretchDoc.xp=xp;
-    entry.id=stretchDoc.id;
-    S.structLog.unshift(stretchDoc);
-    S.session=null; gainXp(xp); save();
-    if(window.Cloud && Cloud.writeSession) Cloud.writeSession(stretchDoc);
-    modal(`<h2>⚠ BONUS CLEAR</h2><div class="big">+${xp} XP</div>
+    built.doc.id=built.date+"-bonus-"+Date.now().toString(36);
+    built.doc.finishedAt=new Date().toISOString();
+    built.doc.xp=built.xp;
+    entry.id=built.doc.id;
+    S.structLog.unshift(built.doc);
+    S.session=null; gainXp(built.xp); save();
+    if(window.Cloud && Cloud.writeSession) Cloud.writeSession(built.doc);
+    if(window.Cloud && Cloud.ensureToday) Cloud.ensureToday();
+    modal(`<h2>⚠ BONUS CLEAR</h2><div class="big">+${built.xp} XP</div>
       <div class="muted">Flexibility is armor.</div>
       <button class="btn" onclick="finishClear()">COMPLETE</button>`);
     renderHeader();
   } else {
-    sealSession(recTitle(sess), xp, det.join("\n"),
+    sealSession(built.title, built.xp, built.det,
       `<div class="muted">Flexibility is armor. Targets increase next visit.</div>`,
-      stretchDoc, lst.map(e=>({exerciseId:e.id, name:e.name})));
+      built.doc);
   }
 }
 
-function completeCommon(name, xp, detail, extraHtml, structured){
-  const t=todayStr();
-  if(S.lastDone!==t){
-    const y=new Date(); y.setDate(y.getDate()-1);
-    const yStr=y.toLocaleDateString("en-CA");
-    S.workStreak = (S.lastDone===yStr) ? S.workStreak+1 : 1;
-    if(S.workStreak>S.workBestStreak) S.workBestStreak=S.workStreak;
+function completeCommon(name, xp, detail, extraHtml, structured, opts){
+  const today=todayStr();
+  const quiet=!!(opts && opts.quiet);
+  const fileDate=(S.session && sessionFileDate(S.session)) || (opts && opts.date) || (structured && structured.date) || today;
+  const filingToday=fileDate===today;
+  if(filingToday){
+    if(S.lastDone!==today){
+      const yStr=Logic.addIsoDays(today, -1);
+      S.workStreak = (S.lastDone===yStr) ? S.workStreak+1 : 1;
+      if(S.workStreak>S.workBestStreak) S.workBestStreak=S.workStreak;
+    }
+    S.lastDone=today;
+  } else {
+    S.lastDone=Logic.nextLastDone(S.lastDone, fileDate);
   }
-  S.lastDone=t;
-  const entry={d:t, name, xp, det:detail};
+  const entry={d:fileDate, name, xp, det:detail};
   if(structured){
-    if(!structured.id) structured.id=t+"-"+Date.now().toString(36);
+    structured.date=fileDate;
+    if(!structured.planDate && S.session && S.session.planDate) structured.planDate=S.session.planDate;
+    if(!structured.id) structured.id=fileDate+"-"+Date.now().toString(36);
     if(!structured.finishedAt) structured.finishedAt=new Date().toISOString();
     structured.xp=xp;
     structured.title=structured.title||name;
-    structured.date=structured.date||t;
     entry.id=structured.id;
     S.structLog=S.structLog||[];
     S.structLog.unshift(structured);
@@ -1522,14 +1616,16 @@ function completeCommon(name, xp, detail, extraHtml, structured){
   }
   S.log.unshift(entry);
   if(S.log.length>200) S.log.length=200;
-  const planDate=S.session && S.session.planDate;
-  const fromBot=S.session && S.session.source==="bot";
+  const planDate=(structured && structured.planDate) || (S.session && S.session.planDate) || "";
+  const fromBot=(S.session && S.session.source==="bot") || (structured && structured.source==="bot") || (S.session && S.session.kind==="plan");
   S.session=null;
   gainXp(xp); save(); pushLB();
   if(structured && window.Cloud && Cloud.writeSession) Cloud.writeSession(structured);
   if(fromBot && planDate && window.Cloud && Cloud.markPlanStatus) Cloud.markPlanStatus(planDate, "completed");
+  if(window.Cloud && Cloud.ensureToday) Cloud.ensureToday();
   if(window.Cloud && Cloud.catchUp) Cloud.catchUp();
-  modal(`<h2>⚠ DUNGEON CLEAR</h2>
+  if(quiet) toast(Logic.fileToast(name, fileDate));
+  else modal(`<h2>⚠ DUNGEON CLEAR</h2>
     <div class="big">+${xp} XP</div>
     ${extraHtml||""}
     <button class="btn" onclick="finishClear()">COMPLETE</button>`);
@@ -1880,6 +1976,168 @@ function resetAll(){
     <button class="btn ghost" onclick="closeModal()">CANCEL</button>`);
 }
 
+/* ---------- day rollover ---------- */
+function sessionFileDate(sess){
+  const s=sess||S.session;
+  if(!s) return todayStr();
+  return Logic.finishFileDate(s, todayStr(), userTz())||todayStr();
+}
+function coachPlanToday(){
+  const t=todayStr();
+  if(!window.Cloud) return null;
+  const live=Cloud.todayPlan && Cloud.todayPlan();
+  if(live && live.date===t) return live;
+  if(Cloud.schedulePlans){
+    const map=Cloud.schedulePlans()||{};
+    if(map[t]){
+      const norm=Logic.normalizePlan(map[t]);
+      if(norm && norm.date===t) return norm;
+    }
+  }
+  return null;
+}
+function dayState(){
+  const signedIn=!!(window.Cloud && Cloud.signedIn && Cloud.signedIn());
+  return {
+    today:todayStr(),
+    timeZone:userTz(),
+    signedIn:signedIn,
+    authPending:!!(window.Cloud && Cloud.authSettled && !Cloud.authSettled()),
+    listenedDate:(window.Cloud && Cloud.listenedDate && Cloud.listenedDate())||"",
+    planReady:!signedIn || !!(window.Cloud && Cloud.planResolved && Cloud.planResolved()),
+    planError:!!(window.Cloud && Cloud.planFailed && Cloud.planFailed()),
+    lastDone:S.lastDone||null,
+    session:S.session||null,
+    plan:coachPlanToday(),
+    daily:S.daily||null
+  };
+}
+function coachGateBlocksFallback(){
+  if(!window.Cloud || !Cloud.signedIn || !Cloud.signedIn()) return false;
+  const gate=Logic.reviewDay(dayState()).gate;
+  return gate==="plan" || gate==="loading" || gate==="hold" || gate==="done" || gate==="raid";
+}
+function modalOpen(){
+  const ovl=document.getElementById("ovl");
+  return !!(ovl && ovl.classList.contains("show"));
+}
+function rollDailyLocal(){
+  if(!S.daily || S.daily.enabled===false) return false;
+  ensureQuest();
+  const t=todayStr();
+  if(S.daily.todayD!==t){
+    const goals=dailyGoals();
+    S.daily.todayD=t;
+    S.daily.parts=goals.map(()=>0);
+    save();
+    return true;
+  }
+  return false;
+}
+let preparingDay=false;
+let dayDirty=false;
+let toastTimer=null;
+function toast(msg){
+  let el=document.getElementById("toast");
+  if(!el){
+    el=document.createElement("div");
+    el.id="toast";
+    el.className="toast";
+    document.body.appendChild(el);
+  }
+  el.textContent=msg;
+  el.style.display="block";
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){ el.style.display="none"; }, 4200);
+}
+function archiveQuiet(sess){
+  if(!sess) return;
+  if(sess.kind==="plan"){
+    const built=planStructured(sess, emptyNotes());
+    built.doc.finishedAt=new Date().toISOString();
+    S.tonnage+=built.ton;
+    S.quests++;
+    completeCommon(sessTitle(), built.xp, built.det, "", built.doc, {quiet:true});
+    return;
+  }
+  if(sess.kind==="lift" && sess.entries){
+    const built=collectLiftClear();
+    if(built){
+      S.tonnage+=built.ton;
+      S.quests++;
+      completeCommon(built.title, prof().workXP, built.det, "", built.doc, {quiet:true});
+      return;
+    }
+  }
+  if((sess.kind==="rec" || sess.kind==="rbonus") && sess.entries){
+    const built=collectRecClear(sess);
+    if(built){
+      S.recDone++;
+      if(built.bonus) S.recBonusD=built.date;
+      if(sess.pool!==undefined) poolState().used[sess.pool]=true;
+      completeCommon(built.title, built.xp, built.det, "", built.doc, {quiet:true});
+      return;
+    }
+  }
+  const title=sessTitle();
+  const date=sessionFileDate(sess);
+  if(sess.kind==="cardio" || sess.kind==="runsimple" || sess.kind==="ph") S.quests++;
+  completeCommon(title, sess.kind==="rbonus"?10:prof().workXP, title+" completed", "", {
+    source:sess.source||"fallback", kind:sess.kind||"note", title:title, date:date,
+    planDate:sess.planDate||null, startedAt:sess.startedAt||null, exercises:[], blocks:[]
+  }, {quiet:true});
+}
+function prepareDay(){
+  if(preparingDay) return false;
+  preparingDay=true;
+  let changed=false;
+  try{
+    if(modalOpen()){
+      if(rollDailyLocal()) changed=true;
+      if(window.Cloud && Cloud.ensureToday && Cloud.ensureToday()) changed=true;
+      return changed;
+    }
+    const review=Logic.reviewDay(dayState());
+    if(review.sessionAction==="file" && S.session){
+      if(TMR){ clearInterval(TMR.int); unlockScreen(); TMR=null; }
+      archiveQuiet(S.session);
+      changed=true;
+    } else if(review.sessionAction==="discard" && S.session){
+      if(TMR){ clearInterval(TMR.int); unlockScreen(); TMR=null; }
+      S.session=null;
+      save();
+      changed=true;
+    }
+    if(rollDailyLocal()) changed=true;
+    if(window.Cloud && Cloud.ensureToday && Cloud.ensureToday()) changed=true;
+  } finally {
+    preparingDay=false;
+  }
+  return changed;
+}
+function onResume(fromTimer){
+  const hidden=typeof document!=="undefined" && document.visibilityState==="hidden";
+  if(hidden && !fromTimer) return;
+  const today=todayStr();
+  const beforeListen=(window.Cloud && Cloud.listenedDate && Cloud.listenedDate())||"";
+  const beforeSession=S.session;
+  const beforeDaily=S.daily && S.daily.todayD;
+  if(prepareDay()) dayDirty=true;
+  if((beforeListen && beforeListen!==today) || (beforeSession && !S.session) || (beforeDaily && beforeDaily!==today)) dayDirty=true;
+  if(hidden || modalOpen()) return;
+  if(!dayDirty) return;
+  if(curView==="workout" && S.session){ dayDirty=false; return; }
+  dayDirty=false;
+  if(curView==="quest" || curView==="workout") go("quest");
+}
+function reloadToday(){
+  prepareDay();
+  if(window.Cloud && Cloud.reloadToday) Cloud.reloadToday();
+  dayDirty=false;
+  go("quest");
+  toast("Reloaded today");
+}
+
 /* ---------- boot ---------- */
 const VIEWS={quest:vQuest, workout:vWorkout, stats:vStats, weight:vWeight, log:vLog, sys:vSys};
 applyTheme(); renderHeader(); renderNav();
@@ -1896,6 +2154,7 @@ if(window.Cloud){
   };
   Cloud.start();
 }
+prepareDay();
 if(S.session) go("workout"); else go("quest");
 if(!S.name) askName(true);
 pushLB();

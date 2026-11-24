@@ -224,8 +224,10 @@ function planGateInner(plan){
 
 function startPlan(force){
   if(S.session){ go("workout"); return; }
-  const plan=Cloud.todayPlan();
-  if(!plan){ go("quest"); return; }
+  if(typeof prepareDay==="function") prepareDay();
+  const plan=(typeof coachPlanToday==="function" && coachPlanToday()) || Cloud.todayPlan();
+  if(!plan || plan.date!==todayStr()){ go("quest"); return; }
+  if(typeof dayState==="function" && Logic.reviewDay(dayState()).gate!=="plan"){ go("quest"); return; }
   if(plan.status==="completed" || plan.status==="skipped") return;
   if(S.lastDone===todayStr()){
     modal(`<h2>⚠ SYSTEM</h2><div>A gate was already cleared today.<br><span class="muted">One dungeon per day. It reopens tomorrow.</span></div><button class="btn" onclick="closeModal()">OK</button>`);
@@ -243,7 +245,7 @@ function startPlan(force){
   if(!sess){ go("quest"); return; }
   S.session=sess;
   save();
-  if(window.Cloud && Cloud.markPlanStatus) Cloud.markPlanStatus(plan.date||todayStr(), "started");
+  if(window.Cloud && Cloud.markPlanStatus) Cloud.markPlanStatus(plan.date, "started");
   go("workout");
 }
 
@@ -467,9 +469,10 @@ function planStructured(sess, notes){
       det.push((b.name||"Skill")+": "+(b.mode==="timed"?(actual.seconds+"s"):(actual.makes+"/"+actual.attempts)));
     }
   }
+  const filed=(typeof sessionFileDate==="function") ? sessionFileDate(sess) : todayStr();
   return {
     doc:{
-      source:"bot", kind:"plan", date:todayStr(), title:sess.title, planDate:sess.planDate||todayStr(),
+      source:"bot", kind:"plan", date:filed, title:sess.title, planDate:sess.planDate||filed,
       deload:!!sess.deload, startedAt:sess.startedAt||null, exercises, blocks, tonnage:Math.round(ton),
       notes:(notes&&notes.notes)||"", pain:notes&&notes.pain?notes.pain:null, swapRequests:(notes&&notes.swapRequests)||[]
     },
@@ -540,9 +543,13 @@ function submitNotes(){
 
 function sealSession(name, xp, det, extra, structured){
   openNotes(function(n){
+    const filed=(typeof sessionFileDate==="function") ? sessionFileDate(S.session) : todayStr();
     const doc=Object.assign({
-      source:"fallback", kind:"lift", date:todayStr(), title:name, startedAt:null
+      source:"fallback", kind:"lift", date:filed, title:name,
+      startedAt:S.session&&S.session.startedAt||null
     }, structured||{}, n, {finishedAt:planNow()});
+    doc.date=filed;
+    if(S.session && S.session.planDate && !doc.planDate) doc.planDate=S.session.planDate;
     completeCommon(name, xp, det, extra, doc);
   });
 }
